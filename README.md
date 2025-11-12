@@ -1,2 +1,2 @@
-# open-pico-local-api
+# Open Pico - Local API
 API library to interface with Pico devices locally in Python
