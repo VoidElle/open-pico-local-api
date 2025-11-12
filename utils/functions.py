@@ -36,7 +36,7 @@ def device_current_mode_supports_fan_control(mode: DeviceModeEnum, on_off_state:
     from utils.constants import MODULAR_FAN_SPEED_PRESET_MODES
     return mode in MODULAR_FAN_SPEED_PRESET_MODES and on_off_state == OnOffStateEnum.ON
 
-def device_current_mode_supports_humidity_selection(mode: DeviceModeEnum, on_off_state: OnOffStateEnum) -> bool:
+def device_current_mode_supports_target_humidity_selection(mode: DeviceModeEnum, on_off_state: OnOffStateEnum) -> bool:
     """
     Check if the given device mode supports humidity selection.
 
