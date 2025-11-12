@@ -38,7 +38,7 @@ def device_current_mode_supports_fan_control(mode: DeviceModeEnum, on_off_state:
 
 def device_current_mode_supports_target_humidity_selection(mode: DeviceModeEnum, on_off_state: OnOffStateEnum) -> bool:
     """
-    Check if the given device mode supports humidity selection.
+    Check if the given device mode supports target humidity selection.
 
     Args:
         :param mode: DeviceModeEnum to check
