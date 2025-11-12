@@ -38,14 +38,19 @@ from exceptions.timeout_error import TimeoutError
 __version__ = "1.0.0"
 __all__ = ['PicoClient', 'PicoDeviceError', 'ConnectionError', 'TimeoutError']
 
+from models.pico_device_model import PicoDeviceModel
+
+from utils.functions import quick_status
+
+
 # ----------------------------
 # MAIN API CLASS
 # ----------------------------
 class PicoClient:
     """
-    IoT Device Controller
+    Pico Client
 
-    A high-level interface for communicating with IoT devices over UDP.
+    A high-level interface for communicating with Technosystemi Pico IoT devices over UDP.
 
     Args:
         ip: Device IP address
@@ -109,7 +114,7 @@ class PicoClient:
 
     def connect(self) -> None:
         """
-        Connect to the IoT device.
+        Connect to the Pico
 
         Raises:
             ConnectionError: If connection fails
@@ -133,7 +138,7 @@ class PicoClient:
             raise ConnectionError(f"Failed to connect: {e}")
 
     def disconnect(self) -> None:
-        """Disconnect from the IoT device."""
+        """Disconnect from the Pico"""
         self._running = False
         if self._listen_thread:
             self._listen_thread.join(timeout=2)
@@ -146,7 +151,7 @@ class PicoClient:
 
     def get_status(self, retry: bool = True) -> Optional[Dict[str, Any]]:
         """
-        Get device status.
+        Get device status
 
         Args:
             retry: Whether to retry on failure
@@ -160,7 +165,7 @@ class PicoClient:
 
         Example:
             >>> status = device.get_status()
-            >>> print(status['temperature'])
+            >>> print(status['name'])
         """
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -201,7 +206,7 @@ class PicoClient:
 
     def send_command(self, command: str, **params) -> Optional[Dict[str, Any]]:
         """
-        Send a custom command to the device.
+        Send a custom command to the device
 
         Args:
             command: Command name
@@ -234,34 +239,19 @@ class PicoClient:
 
         return self._wait_for_response(idp, self.timeout)
 
-    def on_event(self, event_type: str, callback: Callable[[Dict[str, Any]], None]) -> None:
-        """
-        Register a callback for device events.
-
-        Args:
-            event_type: Type of event to listen for
-            callback: Function to call when event occurs
-
-        Example:
-            >>> def on_status_change(data):
-            ...     print(f"Status changed: {data}")
-            >>> device.on_event("status_change", on_status_change)
-        """
-        self._event_callbacks[event_type] = callback
-
     # ----------------------------
     # INTERNAL METHODS
     # ----------------------------
 
     def _get_next_idp(self) -> int:
-        """Thread-safe IDP counter increment."""
+        """Thread-safe IDP counter increment"""
         with self._lock:
             idp = self._idp_counter
             self._idp_counter += 1
             return idp
 
     def _listen_loop(self):
-        """Background thread that continuously listens for UDP responses."""
+        """Background thread that continuously listens for UDP responses"""
         while self._running:
             try:
                 data, addr = self._sock.recvfrom(8192)
@@ -286,7 +276,7 @@ class PicoClient:
                     print(f"⚠ Listen error: {e}")
 
     def _send_command(self, cmd: Dict[str, Any]) -> bool:
-        """Send a command to the device."""
+        """Send a command to the device"""
         try:
             data = json.dumps(cmd).encode('utf-8')
             self._sock.sendto(data, (self.ip, self.device_port))
@@ -300,9 +290,8 @@ class PicoClient:
             return False
 
     def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
-        """Wait for responses matching the given idp."""
+        """Wait for responses matching the given idp"""
         got_ack = False
-        full_status = None
         end_time = time.time() + timeout
         ack_timeout = 3.0
         ack_received_time = None
@@ -344,31 +333,6 @@ class PicoClient:
 
         return None
 
-
-# ----------------------------
-# CONVENIENCE FUNCTIONS
-# ----------------------------
-def quick_status(ip: str, pin: str, **kwargs) -> Optional[Dict[str, Any]]:
-    """
-    Quickly get device status without managing connection.
-
-    Args:
-        ip: Device IP address
-        pin: Device PIN code
-        **kwargs: Additional IoTDevice parameters
-
-    Returns:
-        Device status or None
-
-    Example:
-        >>> status = quick_status("192.168.1.208", "1234")
-    """
-    with PicoClient(ip=ip, pin=pin, **kwargs) as iot_device:
-        return iot_device.get_status()
-
-    return None
-
-
 # ----------------------------
 # EXAMPLE USAGE
 # ----------------------------
@@ -377,8 +341,10 @@ if __name__ == "__main__":
     #device = IoTDevice(ip="192.168.8.159", pin="1234", verbose=True)
     #device.connect()
 
-    status = quick_status(ip="192.168.8.159", pin="1234", verbose=True)
+    status = quick_status(ip="192.168.8.133", pin="1234", verbose=True)
     if status:
-        print(f"\n📊 Device Status: {json.dumps(status, indent=2)}")
+        print(f"\n📊 Device Status UNPARSED: {json.dumps(status, indent=2)}")
+        status_parsed: PicoDeviceModel = PicoDeviceModel.from_dict(status)
+        print(f"\n📊 Device Status: {status_parsed.to_dict()}")
 
     #device.disconnect()
