@@ -40,7 +40,7 @@ __all__ = ['PicoClient', 'PicoDeviceError', 'ConnectionError', 'TimeoutError']
 
 from models.pico_device_model import PicoDeviceModel
 
-from utils.functions import quick_status
+from utils.quick_functions import quick_status
 
 
 # ----------------------------
@@ -343,7 +343,6 @@ if __name__ == "__main__":
 
     status = quick_status(ip="192.168.8.133", pin="1234", verbose=True)
     if status:
-        print(f"\n📊 Device Status UNPARSED: {json.dumps(status, indent=2)}")
         status_parsed: PicoDeviceModel = PicoDeviceModel.from_dict(status)
         print(f"\n📊 Device Status: {status_parsed.to_dict()}")
 

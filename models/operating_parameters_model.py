@@ -36,3 +36,12 @@ class OperatingParametersModel:
     def fan_running(self) -> bool:
         """Check if fan is currently running."""
         return self.speed > 0
+
+    @property
+    def is_night_mode_active(self) -> bool:
+        """Check if night mode is active."""
+        return self.night_mode == 1
+
+    def is_led_state_on(self) -> bool:
+        """Check if LED is on."""
+        return self.led_on_off == 1
