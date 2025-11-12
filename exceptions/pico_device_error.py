@@ -1,3 +1,3 @@
 class PicoDeviceError(Exception):
-    """Base exception for Pico device errors."""
+    """Base exception for Pico device errors"""
     pass
