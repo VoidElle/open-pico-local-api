@@ -6,7 +6,7 @@ A Python library for controlling Tecnosystemi Pico IoT devices via UDP communica
 Basic Usage:
     from iot_device import IoTDevice
 
-    device = IoTDevice(ip="192.168.1.208", pin="1234")
+    device = PicoClient(ip="192.168.1.208", pin="1234")
     device.connect()
 
     status = device.get_status()
@@ -16,16 +16,18 @@ Basic Usage:
 
 Advanced Usage with Auto-Reconnect:
     # Enable auto-reconnect for all operations
-    device = IoTDevice(ip="192.168.1.208", pin="1234", auto_reconnect=True)
+    device = PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True)
     device.connect()
 
     # Methods will automatically reconnect if connection is lost
     status = device.get_status()
 
     # Context manager (auto connect/disconnect)
-    with IoTDevice(ip="192.168.1.208", pin="1234", auto_reconnect=True) as device:
+    with PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True) as device:
         status = device.get_status()
-        response = device.send_command("set_temp", temp=25)
+
+    # Remember to close the connection
+    device.disconnect()
 """
 
 import socket
