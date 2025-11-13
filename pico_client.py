@@ -4,17 +4,22 @@ Open Pico Local API
 A Python library for controlling Tecnosystemi Pico IoT devices via UDP communication
 
 Basic Usage:
-    from iot_device import IoTDevice
+    from pico_client import PicoClient
 
+    # Create the client and connect
     device = PicoClient(ip="192.168.1.208", pin="1234")
     device.connect()
 
+    # Get device status and print it
     status = device.get_status()
     print(status)
 
+    # Close the connection
     device.disconnect()
 
 Advanced Usage with Auto-Reconnect:
+    from pico_client import PicoClient
+
     # Enable auto-reconnect for all operations
     device = PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True)
     device.connect()
@@ -26,8 +31,15 @@ Advanced Usage with Auto-Reconnect:
     with PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True) as device:
         status = device.get_status()
 
-    # Remember to close the connection
+    # Close the connection
     device.disconnect()
+
+Quick usage:
+    from utils.quick_functions import quick_status
+
+    # Quickly get device status without managing connection
+    status = quick_status(ip="192.168.1.208", pin="1234")
+    print(status)
 """
 
 import socket
