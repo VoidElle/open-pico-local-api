@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any, Union
 from queue import Queue, Empty
 
 from enums.device_mode_enum import DeviceModeEnum
+from enums.target_humidity_enum import TargetHumidityEnum
 from exceptions.pico_device_error import PicoDeviceError
 from exceptions.connection_error import ConnectionError
 from exceptions.timeout_error import TimeoutError
@@ -251,13 +252,13 @@ class PicoClient:
 
     # Todo: Set to enum
     @auto_reconnect
-    def set_target_humidity(self, humidity: int, retry: bool = True) -> Optional[Dict[str, Any]]:
+    def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True) -> Optional[Dict[str, Any]]:
         """Change the device operating mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
         cmd = {
-            "s_umd": humidity,
+            "s_umd": target_humidity,
             "cmd": "upd_pico",
             "frm": "app",
             "pin": self.pin
@@ -449,6 +450,6 @@ if __name__ == "__main__":
 
     device.connect()
     device.turn_off()
-    is_device_on = device.is_device_on()
-    print(f"Device is {'ON' if is_device_on else 'OFF'}")
+    status = device.get_status()
+    print(f"Device {status}")
     device.disconnect()
