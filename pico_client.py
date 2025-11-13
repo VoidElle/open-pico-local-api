@@ -8,9 +8,10 @@ import socket
 import json
 import time
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from queue import Queue, Empty
 
+from enums.device_mode_enum import DeviceModeEnum
 from exceptions.pico_device_error import PicoDeviceError
 from exceptions.connection_error import ConnectionError
 from exceptions.timeout_error import TimeoutError
@@ -138,7 +139,7 @@ class PicoClient:
     # ----------------------------
 
     @auto_reconnect
-    def get_status(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+    def get_status(self, retry: bool = True) -> Optional[PicoDeviceModel]:
         """
         Get device status (with auto-reconnect if enabled)
 
@@ -146,7 +147,7 @@ class PicoClient:
             retry: Whether to retry on failure
 
         Returns:
-            Device status dictionary or None if failed
+            PicoDeviceModel instance or None if failed
 
         Raises:
             ConnectionError: If not connected and when auto-reconnect fails
@@ -161,7 +162,16 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        response = self._execute_command_with_retry(cmd, retry)
+        if not response:
+            return None
+
+        try:
+            return PicoDeviceModel.from_dict(response)
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠ Failed to parse PicoDeviceModel: {e}")
+            return None
 
     @auto_reconnect
     def turn_on(self, retry: bool = True) -> Optional[Dict[str, Any]]:
@@ -172,6 +182,31 @@ class PicoClient:
     def turn_off(self, retry: bool = True) -> Optional[Dict[str, Any]]:
         """Turn the device off"""
         return self._set_on_off(False, retry)
+
+    @auto_reconnect
+    def is_device_on(self):
+        """Check if the device is currently on"""
+        pico_device_status: PicoDeviceModel = self.get_status()
+        return pico_device_status.operating.is_on
+
+    @auto_reconnect
+    def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the device operating mode (internal implementation)"""
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        # Convert enum to int if needed
+        mode_value = int(mode)
+
+        cmd = {
+            "mod": mode_value,
+            "on_off": 1,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
 
     # ----------------------------
     # INTERNAL METHODS
@@ -356,7 +391,7 @@ if __name__ == "__main__":
     )
 
     device.connect()
-    print(device.get_status())
-    time.sleep(5)
-    print(device.get_status())
+    device.turn_off()
+    is_device_on = device.is_device_on()
+    print(f"Device is {'ON' if is_device_on else 'OFF'}")
     device.disconnect()
