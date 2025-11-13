@@ -2,44 +2,6 @@
 Open Pico Local API
 
 A Python library for controlling Tecnosystemi Pico IoT devices via UDP communication
-
-Basic Usage:
-    from pico_client import PicoClient
-
-    # Create the client and connect
-    device = PicoClient(ip="192.168.1.208", pin="1234")
-    device.connect()
-
-    # Get device status and print it
-    status = device.get_status()
-    print(status)
-
-    # Close the connection
-    device.disconnect()
-
-Advanced Usage with Auto-Reconnect:
-    from pico_client import PicoClient
-
-    # Enable auto-reconnect for all operations
-    device = PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True)
-    device.connect()
-
-    # Methods will automatically reconnect if connection is lost
-    status = device.get_status()
-
-    # Context manager (auto connect/disconnect)
-    with PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True) as device:
-        status = device.get_status()
-
-    # Close the connection
-    device.disconnect()
-
-Quick usage:
-    from utils.quick_functions import quick_status
-
-    # Quickly get device status without managing connection
-    status = quick_status(ip="192.168.1.208", pin="1234")
-    print(status)
 """
 
 import socket
@@ -59,37 +21,13 @@ __all__ = ['PicoClient', 'PicoDeviceError', 'ConnectionError', 'TimeoutError']
 from models.pico_device_model import PicoDeviceModel
 from utils.auto_reconnect import auto_reconnect
 
-# ----------------------------
-# MAIN API CLASS
-# ----------------------------
+
 class PicoClient:
     """
     Pico Client
 
     A high-level interface for communicating with Technosystemi Pico IoT devices over UDP
     with automatic reconnection capabilities.
-
-    Args:
-        ip: Device IP address
-        pin: Device PIN code
-        device_port: Device UDP port (default: 40070)
-        local_port: Local UDP port (default: 40069)
-        timeout: Response timeout in seconds (default: 15)
-        retry_attempts: Number of retry attempts (default: 3)
-        retry_delay: Delay between retries in seconds (default: 2.0)
-        auto_reconnect: Enable automatic reconnection (default: False)
-        max_reconnect_attempts: Max reconnection attempts (default: 3)
-        reconnect_delay: Delay between reconnection attempts (default: 2.0)
-
-    Example:
-        >>> device = PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True)
-        >>> device.connect()
-        >>> status = device.get_status()  # Will auto-reconnect if connection lost
-        >>> device.disconnect()
-
-        >>> # With context manager
-        >>> with PicoClient(ip="192.168.1.208", pin="1234", auto_reconnect=True) as device:
-        ...     status = device.get_status()
     """
 
     def __init__(
@@ -195,6 +133,10 @@ class PicoClient:
         if self.verbose:
             print("✓ Disconnected")
 
+    # ----------------------------
+    # PUBLIC API METHODS
+    # ----------------------------
+
     @auto_reconnect
     def get_status(self, retry: bool = True) -> Optional[Dict[str, Any]]:
         """
@@ -209,83 +151,27 @@ class PicoClient:
         Raises:
             ConnectionError: If not connected and when auto-reconnect fails
             TimeoutError: If operation times out
-
-        Example:
-            >>> status = device.get_status()
-            >>> print(status['name'])
         """
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
-        max_attempts = self.retry_attempts if retry else 1
-        max_idp_sync = 10
-
-        for attempt in range(1, max_attempts + 1):
-            if attempt > 1:
-                if self.verbose:
-                    print(f"↻ Retry {attempt}/{max_attempts}")
-                time.sleep(self.retry_delay)
-
-            for idp_sync_attempt in range(max_idp_sync):
-                if idp_sync_attempt > 0 and self.verbose:
-                    print(f"  ↻ IDP sync attempt {idp_sync_attempt}/{max_idp_sync}")
-                    time.sleep(0.5)
-
-                idp = self._get_next_idp()
-                cmd = {
-                    "cmd": "stato_sync",
-                    "frm": "app",
-                    "idp": idp,
-                    "pin": self.pin
-                }
-
-                if not self._send_command(cmd):
-                    continue
-
-                status = self._wait_for_response(idp, self.timeout)
-
-                if status:
-                    if idp_sync_attempt > 0 and self.verbose:
-                        print(f"  ✓ IDP synchronized after {idp_sync_attempt} increments")
-                    return status
-
-        return None
-
-    @auto_reconnect
-    def send_command(self, command: str, **params) -> Optional[Dict[str, Any]]:
-        """
-        Send a custom command to the device (with auto-reconnect if enabled)
-
-        Args:
-            command: Command name
-            **params: Additional command parameters
-
-        Returns:
-            Device response or None if failed
-
-        Raises:
-            ConnectionError: If not connected and when auto-reconnect fails
-
-        Example:
-            >>> device.send_command("set_temp", temp=25, mode="heat")
-            >>> device.send_command("turn_on")
-        """
-        if not self._connected:
-            raise ConnectionError("Not connected to device")
-
-        idp = self._get_next_idp()
         cmd = {
-            "cmd": command,
+            "cmd": "stato_sync",
             "frm": "app",
-            "idp": idp,
-            "pin": self.pin,
-            **params
+            "pin": self.pin
         }
 
-        if not self._send_command(cmd):
-            return None
+        return self._execute_command_with_retry(cmd, retry)
 
-        return self._wait_for_response(idp, self.timeout)
+    @auto_reconnect
+    def turn_on(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Turn the device on"""
+        return self._set_on_off(True, retry)
+
+    @auto_reconnect
+    def turn_off(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Turn the device off"""
+        return self._set_on_off(False, retry)
 
     # ----------------------------
     # INTERNAL METHODS
@@ -326,8 +212,12 @@ class PicoClient:
                     # Socket error during listening might indicate connection issue
                     raise
 
-    def _send_command(self, cmd: Dict[str, Any]) -> bool:
-        """Send a command to the device"""
+    def _send_udp_packet(self, cmd: Dict[str, Any]) -> bool:
+        """
+        Send a raw UDP packet to the device (internal method - no auto-reconnect)
+
+        This is the low-level method that actually sends data over the socket.
+        """
         try:
             data = json.dumps(cmd).encode('utf-8')
             self._sock.sendto(data, (self.ip, self.device_port))
@@ -338,7 +228,51 @@ class PicoClient:
         except Exception as e:
             if self.verbose:
                 print(f"✗ Send error: {e}")
-            raise  # Re-raise to trigger auto-reconnect
+            raise  # Re-raise to trigger auto-reconnect at higher level
+
+    def _execute_command_with_retry(
+            self,
+            cmd_dict: Dict[str, Any],
+            retry: bool = True
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Execute a command with IDP sync retry logic
+
+        Args:
+            cmd_dict: Command dictionary (without idp, will be added)
+            retry: Whether to retry on failure
+
+        Returns:
+            Device response or None if failed
+        """
+        max_attempts = self.retry_attempts if retry else 1
+        max_idp_sync = 10
+
+        for attempt in range(1, max_attempts + 1):
+            if attempt > 1:
+                if self.verbose:
+                    print(f"↻ Retry {attempt}/{max_attempts}")
+                time.sleep(self.retry_delay)
+
+            for idp_sync_attempt in range(max_idp_sync):
+                if idp_sync_attempt > 0 and self.verbose:
+                    print(f"  ↻ IDP sync attempt {idp_sync_attempt}/{max_idp_sync}")
+                    time.sleep(0.5)
+
+                idp = self._get_next_idp()
+                cmd = {**cmd_dict, "idp": idp}
+
+                if not self._send_udp_packet(cmd):
+                    continue
+
+                response = self._wait_for_response(idp, self.timeout)
+
+                if response:
+                    if idp_sync_attempt > 0 and self.verbose:
+                        print(f"  ✓ IDP synchronized after {idp_sync_attempt} increments")
+                    return response
+
+        return None
 
     def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
         """Wait for responses matching the given idp"""
@@ -372,25 +306,47 @@ class PicoClient:
 
                 elif response.get("res") != 99:
                     if self.verbose:
-                        print(f"  ✓ Full status received (idp:{idp})")
-                    full_status = response
+                        print(f"  ✓ Response received (idp:{idp})")
 
                     ack = {"idp": idp, "frm": "app", "res": 99}
-                    self._send_command(ack)
-                    return full_status
+                    self._send_udp_packet(ack)
+                    return response
 
             except Empty:
                 continue
 
         return None
 
+    def _set_on_off(self, turn_on: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """
+        Turn the device on or off (internal implementation)
+
+        Args:
+            turn_on: True to turn on, False to turn off
+            retry: Whether to retry on failure
+
+        Returns:
+            Device response or None if failed
+
+        Raises:
+            ConnectionError: If not connected
+        """
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        cmd = {
+            "on_off": 1 if turn_on else 2,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
 
 # ----------------------------
 # EXAMPLE USAGE
 # ----------------------------
 if __name__ == "__main__":
-    # Example 1: Basic usage with auto-reconnect in a continuous loop
-    print("Example 1: Auto-reconnect enabled with continuous monitoring")
     device = PicoClient(
         ip="192.168.8.133",
         pin="1234",
@@ -399,40 +355,8 @@ if __name__ == "__main__":
         max_reconnect_attempts=3
     )
 
-    try:
-        device.connect()
-
-        print("Starting continuous monitoring loop (Ctrl+C to stop)...")
-        iteration = 0
-
-        while True:
-            iteration += 1
-            print(f"\n{'='*60}")
-            print(f"Iteration {iteration} - {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"{'='*60}")
-
-            try:
-                # This will automatically reconnect if connection is lost
-                status = device.get_status()
-                if status:
-                    status_parsed = PicoDeviceModel.from_dict(status)
-                    print(f"\n📊 Device Status: {status_parsed.to_dict()}")
-                else:
-                    print("\n⚠ Failed to get status")
-
-            except KeyboardInterrupt:
-                print("\n\n🛑 Stopping monitoring loop...")
-                raise
-            except Exception as e:
-                print(f"\n❌ Error in iteration {iteration}: {e}")
-
-            # Wait 10 seconds before next iteration
-            print(f"\n⏳ Waiting 10 seconds before next check...")
-            time.sleep(10)
-
-    except KeyboardInterrupt:
-        print("\n✓ Gracefully shutting down...")
-    finally:
-        device.disconnect()
-
-    print("\n" + "="*50 + "\n")
+    device.connect()
+    print(device.get_status())
+    time.sleep(5)
+    print(device.get_status())
+    device.disconnect()
