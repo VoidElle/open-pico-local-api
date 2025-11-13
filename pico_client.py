@@ -2,6 +2,7 @@
 Open Pico Local API
 
 A Python library for controlling Tecnosystemi Pico IoT devices via UDP communication
+TODO: Make the code asynchronous using asyncio
 """
 
 import socket
@@ -195,6 +196,68 @@ class PicoClient:
         cmd = {
             "mod": mode_value,
             "on_off": 1,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
+
+    @auto_reconnect
+    def change_fan_speed(self, percentage: int, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the device operating mode"""
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        cmd = {
+            "spd_row": percentage,
+            "speed": 0,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
+
+    @auto_reconnect
+    def set_night_mode(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the device operating mode"""
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        cmd = {
+            "night_mod": 1 if enable else 2,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
+
+    @auto_reconnect
+    def set_led_status(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the device operating mode"""
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        cmd = {
+            "led_on_off_breve": 1 if enable else 2,
+            "cmd": "upd_pico",
+            "frm": "app",
+            "pin": self.pin
+        }
+
+        return self._execute_command_with_retry(cmd, retry)
+
+    # Todo: Set to enum
+    @auto_reconnect
+    def set_target_humidity(self, humidity: int, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the device operating mode"""
+        if not self._connected:
+            raise ConnectionError("Not connected to device")
+
+        cmd = {
+            "s_umd": humidity,
             "cmd": "upd_pico",
             "frm": "app",
             "pin": self.pin
