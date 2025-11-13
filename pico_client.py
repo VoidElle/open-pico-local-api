@@ -184,14 +184,8 @@ class PicoClient:
         return self._set_on_off(False, retry)
 
     @auto_reconnect
-    def is_device_on(self):
-        """Check if the device is currently on"""
-        pico_device_status: PicoDeviceModel = self.get_status()
-        return pico_device_status.operating.is_on
-
-    @auto_reconnect
     def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> Optional[Dict[str, Any]]:
-        """Change the device operating mode (internal implementation)"""
+        """Change the device operating mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 

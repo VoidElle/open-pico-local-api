@@ -139,6 +139,11 @@ class PicoDeviceModel:
                 self.system.memory_free > 10000
         )
 
+    @property
+    def is_on(self) -> bool:
+        """Check if device is currently ON"""
+        return self.operating.is_on
+
     def __str__(self) -> str:
         """Human-readable status summary."""
         return f"""Pico Device Status: {self.device_info.name}
