@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from enums.target_humidity_enum import TargetHumidityEnum
+
 
 @dataclass
 class SensorReadingsModel:
@@ -14,7 +16,7 @@ class SensorReadingsModel:
     humidity_raw: int  # umd_raw
 
     # Setpoints
-    humidity_setpoint: int  # s_umd
+    humidity_setpoint: TargetHumidityEnum  # s_umd
     co2_setpoint: int  # s_co2
 
     @property

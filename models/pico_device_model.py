@@ -3,11 +3,13 @@ from typing import Dict, Any
 
 from enums.device_mode_enum import DeviceModeEnum
 from enums.on_off_state_enum import OnOffStateEnum
+from enums.target_humidity_enum import TargetHumidityEnum
 from models.device_info_model import DeviceInfoModel
 from models.operating_parameters_model import OperatingParametersModel
 from models.parameter_arrays_model import ParameterArraysModel
 from models.sensor_readings_model import SensorReadingsModel
 from models.system_info_model import SystemInfoModel
+from utils.constants import MODULAR_FAN_SPEED_PRESET_MODES, HUMIDITY_SELECTOR_PRESET_MODES
 
 
 @dataclass
@@ -72,7 +74,7 @@ class PicoDeviceModel:
             tvoc=data.get("v_Tvoc", 0),
             eco2=data.get("v_ECo2", 0),
             humidity_raw=data.get("umd_raw", 0),
-            humidity_setpoint=data.get("s_umd", 0),
+            humidity_setpoint=TargetHumidityEnum(data.get("s_umd", 0)),
             co2_setpoint=data.get("s_co2", 0)
         )
 
@@ -144,15 +146,17 @@ class PicoDeviceModel:
         """Check if device is currently ON"""
         return self.operating.is_on
 
-    def __str__(self) -> str:
-        """Human-readable status summary."""
-        return f"""Pico Device Status: {self.device_info.name}
-  Firmware: {self.device_info.firmware_full}
-  Temperature: {self.sensors.temperature_celsius}°C
-  Humidity: {self.sensors.humidity_percent}%
-  Mode: {self.operating.mode.name}
-  Status: {'ON' if self.operating.is_on else 'OFF'}
-  Fan Speed: {self.operating.speed}
-  Errors: {len(self.parameters.active_errors)}
-  Uptime: {self.system.uptime_days:.1f} days
-  Memory Free: {self.system.memory_free_kb:.1f} KB"""
+    @property
+    def support_fan_speed_control(self) -> bool:
+        """Check if device supports fan speed control"""
+        return self.operating.mode in MODULAR_FAN_SPEED_PRESET_MODES
+
+    @property
+    def support_target_humidity_selection(self) -> bool:
+        """Check if device supports target humidity selection"""
+        return self.operating.mode in HUMIDITY_SELECTOR_PRESET_MODES
+
+    @property
+    def support_night_mode_toggle(self) -> bool:
+        """Check if device supports night mode toggle"""
+        return self.operating.mode in MODULAR_FAN_SPEED_PRESET_MODES
