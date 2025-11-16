@@ -12,12 +12,14 @@ from typing import Optional, Dict, Any, Union
 
 from enums.device_mode_enum import DeviceModeEnum
 from enums.target_humidity_enum import TargetHumidityEnum
+from exceptions.not_supported_error import NotSupportedError
 from exceptions.pico_device_error import PicoDeviceError
 from exceptions.connection_error import ConnectionError
 from exceptions.timeout_error import TimeoutError
 
 from models.pico_device_model import PicoDeviceModel
 from utils.auto_reconnect import auto_reconnect
+from utils.constants import HUMIDITY_SELECTOR_PRESET_MODES, MODULAR_FAN_SPEED_PRESET_MODES
 from utils.pico_protocol import PicoProtocol
 
 __version__ = "2.0.0"
@@ -202,10 +204,17 @@ class PicoClient:
         return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    async def change_fan_speed(self, percentage: int, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def change_fan_speed(self, percentage: int, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
         """Change the fan speed"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
+
+        # Check if current mode supports fan speed control
+        # Force option can be used to skip this check
+        if not force:
+            current_status = await self.get_status(retry=retry)
+            if current_status.operating.mode not in MODULAR_FAN_SPEED_PRESET_MODES:
+                raise NotSupportedError(f"Current mode {current_status.operating.mode} does not support fan speed control!")
 
         cmd = {
             "spd_row": percentage,
@@ -218,10 +227,17 @@ class PicoClient:
         return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    async def set_night_mode(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def set_night_mode(self, enable: bool, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
         """Set night mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
+
+        # Check if current mode supports night mode
+        # Force option can be used to skip this check
+        if not force:
+            current_status = await self.get_status(retry=retry)
+            if current_status.operating.mode not in MODULAR_FAN_SPEED_PRESET_MODES:
+                raise NotSupportedError(f"Current mode {current_status.operating.mode} does not support night mode!")
 
         cmd = {
             "night_mod": 1 if enable else 2,
@@ -248,10 +264,17 @@ class PicoClient:
         return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
         """Set target humidity"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
+
+        # Check if current mode supports target humidity selection
+        # Force option can be used to skip this check
+        if not force:
+            current_status = await self.get_status(retry=retry)
+            if current_status.operating.mode not in HUMIDITY_SELECTOR_PRESET_MODES:
+                raise NotSupportedError(f"Current mode {current_status.operating.mode} does not support target humidity selection!")
 
         cmd = {
             "s_umd": target_humidity,
