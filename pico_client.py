@@ -2,15 +2,13 @@
 Open Pico Local API
 
 A Python library for controlling Tecnosystemi Pico IoT devices via UDP communication
-TODO: Make the code asynchronous using asyncio
+using asyncio for asynchronous operations.
 """
 
-import socket
+import asyncio
 import json
 import time
-import threading
 from typing import Optional, Dict, Any, Union
-from queue import Queue, Empty
 
 from enums.device_mode_enum import DeviceModeEnum
 from enums.target_humidity_enum import TargetHumidityEnum
@@ -18,20 +16,15 @@ from exceptions.pico_device_error import PicoDeviceError
 from exceptions.connection_error import ConnectionError
 from exceptions.timeout_error import TimeoutError
 
-__version__ = "1.1.0"
-__all__ = ['PicoClient', 'PicoDeviceError', 'ConnectionError', 'TimeoutError']
-
 from models.pico_device_model import PicoDeviceModel
 from utils.auto_reconnect import auto_reconnect
+from utils.pico_protocol import PicoProtocol
+
+__version__ = "2.0.0"
+__all__ = ['PicoClient', 'PicoDeviceError', 'ConnectionError', 'TimeoutError']
 
 
 class PicoClient:
-    """
-    Pico Client
-
-    A high-level interface for communicating with Technosystemi Pico IoT devices over UDP
-    with automatic reconnection capabilities.
-    """
 
     def __init__(
             self,
@@ -61,23 +54,24 @@ class PicoClient:
         self._max_reconnect_attempts = max_reconnect_attempts
         self._reconnect_delay = reconnect_delay
 
-        self._sock = None
+        self._transport = None
+        self._protocol = None
         self._idp_counter = 1
-        self._response_queue = Queue()
+        self._response_queue = asyncio.Queue()
         self._running = False
-        self._listen_thread = None
-        self._lock = threading.Lock()
+        self._listen_task = None
+        self._lock = asyncio.Lock()
         self._connected = False
         self._event_callbacks = {}
 
-    def __enter__(self):
-        """Context manager entry"""
-        self.connect()
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit"""
-        self.disconnect()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        await self.disconnect()
         return False
 
     @property
@@ -96,7 +90,7 @@ class PicoClient:
             status = "enabled" if value else "disabled"
             print(f"Auto-reconnect {status}")
 
-    def connect(self) -> None:
+    async def connect(self) -> None:
         """
         Connect to the Pico
 
@@ -107,13 +101,16 @@ class PicoClient:
             return
 
         try:
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self._sock.bind(("", self.local_port))
-            self._sock.settimeout(0.5)
+            # Using asyncio.get_running_loop() for Home Assistant compatibility
+            loop = asyncio.get_running_loop()
+
+            # Create UDP endpoint
+            self._transport, self._protocol = await loop.create_datagram_endpoint(
+                lambda: PicoProtocol(self._response_queue, self._event_callbacks, self.verbose),
+                local_addr=("0.0.0.0", self.local_port)
+            )
 
             self._running = True
-            self._listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
-            self._listen_thread.start()
             self._connected = True
 
             if self.verbose:
@@ -124,13 +121,13 @@ class PicoClient:
         except Exception as e:
             raise ConnectionError(f"Failed to connect: {e}")
 
-    def disconnect(self) -> None:
+    async def disconnect(self) -> None:
         """Disconnect from the Pico"""
         self._running = False
-        if self._listen_thread:
-            self._listen_thread.join(timeout=2)
-        if self._sock:
-            self._sock.close()
+
+        if self._transport:
+            self._transport.close()
+
         self._connected = False
 
         if self.verbose:
@@ -141,7 +138,7 @@ class PicoClient:
     # ----------------------------
 
     @auto_reconnect
-    def get_status(self, retry: bool = True) -> Optional[PicoDeviceModel]:
+    async def get_status(self, retry: bool = True) -> Optional[PicoDeviceModel]:
         """
         Get device status (with auto-reconnect if enabled)
 
@@ -164,7 +161,7 @@ class PicoClient:
             "pin": self.pin
         }
 
-        response = self._execute_command_with_retry(cmd, retry)
+        response = await self._execute_command_with_retry(cmd, retry)
         if not response:
             return None
 
@@ -176,17 +173,17 @@ class PicoClient:
             return None
 
     @auto_reconnect
-    def turn_on(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def turn_on(self, retry: bool = True) -> Optional[Dict[str, Any]]:
         """Turn the device on"""
-        return self._set_on_off(True, retry)
+        return await self._set_on_off(True, retry)
 
     @auto_reconnect
-    def turn_off(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def turn_off(self, retry: bool = True) -> Optional[Dict[str, Any]]:
         """Turn the device off"""
-        return self._set_on_off(False, retry)
+        return await self._set_on_off(False, retry)
 
     @auto_reconnect
-    def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> Optional[Dict[str, Any]]:
         """Change the device operating mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -202,11 +199,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    def change_fan_speed(self, percentage: int, retry: bool = True) -> Optional[Dict[str, Any]]:
-        """Change the device operating mode"""
+    async def change_fan_speed(self, percentage: int, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Change the fan speed"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
@@ -218,11 +215,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    def set_night_mode(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
-        """Change the device operating mode"""
+    async def set_night_mode(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Set night mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
@@ -233,11 +230,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
     @auto_reconnect
-    def set_led_status(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
-        """Change the device operating mode"""
+    async def set_led_status(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Set LED status"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
@@ -248,12 +245,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
-    # Todo: Set to enum
     @auto_reconnect
-    def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True) -> Optional[Dict[str, Any]]:
-        """Change the device operating mode"""
+    async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True) -> Optional[Dict[str, Any]]:
+        """Set target humidity"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
 
@@ -264,48 +260,20 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
     # ----------------------------
     # INTERNAL METHODS
     # ----------------------------
 
-    def _get_next_idp(self) -> int:
+    async def _get_next_idp(self) -> int:
         """Thread-safe IDP counter increment"""
-        with self._lock:
+        async with self._lock:
             idp = self._idp_counter
             self._idp_counter += 1
             return idp
 
-    def _listen_loop(self):
-        """Background thread that continuously listens for UDP responses"""
-        while self._running:
-            try:
-                data, addr = self._sock.recvfrom(8192)
-                try:
-                    response = json.loads(data.decode('utf-8'))
-                    if self.verbose:
-                        print(f"← RECV: {response.get('res', response.get('cmd', 'unknown'))}")
-                    self._response_queue.put((response, addr))
-
-                    # Trigger event callbacks
-                    cmd = response.get('cmd', '')
-                    if cmd in self._event_callbacks:
-                        self._event_callbacks[cmd](response)
-
-                except json.JSONDecodeError as e:
-                    if self.verbose:
-                        print(f"⚠ JSON decode error: {e}")
-            except socket.timeout:
-                continue
-            except Exception as e:
-                if self._running and self.verbose:
-                    print(f"⚠ Listen error: {e}")
-                if self._running:
-                    # Socket error during listening might indicate connection issue
-                    raise
-
-    def _send_udp_packet(self, cmd: Dict[str, Any]) -> bool:
+    async def _send_udp_packet(self, cmd: Dict[str, Any]) -> bool:
         """
         Send a raw UDP packet to the device (internal method - no auto-reconnect)
 
@@ -313,7 +281,7 @@ class PicoClient:
         """
         try:
             data = json.dumps(cmd).encode('utf-8')
-            self._sock.sendto(data, (self.ip, self.device_port))
+            self._transport.sendto(data, (self.ip, self.device_port))
             if self.verbose:
                 cmd_name = cmd.get('cmd', 'ACK' if cmd.get('res') == 99 else 'unknown')
                 print(f"→ SENT: {cmd_name} (idp:{cmd['idp']})")
@@ -323,7 +291,7 @@ class PicoClient:
                 print(f"✗ Send error: {e}")
             raise  # Re-raise to trigger auto-reconnect at higher level
 
-    def _execute_command_with_retry(
+    async def _execute_command_with_retry(
             self,
             cmd_dict: Dict[str, Any],
             retry: bool = True
@@ -345,20 +313,20 @@ class PicoClient:
             if attempt > 1:
                 if self.verbose:
                     print(f"↻ Retry {attempt}/{max_attempts}")
-                time.sleep(self.retry_delay)
+                await asyncio.sleep(self.retry_delay)
 
             for idp_sync_attempt in range(max_idp_sync):
                 if idp_sync_attempt > 0 and self.verbose:
                     print(f"  ↻ IDP sync attempt {idp_sync_attempt}/{max_idp_sync}")
-                    time.sleep(0.5)
+                    await asyncio.sleep(0.5)
 
-                idp = self._get_next_idp()
+                idp = await self._get_next_idp()
                 cmd = {**cmd_dict, "idp": idp}
 
-                if not self._send_udp_packet(cmd):
+                if not await self._send_udp_packet(cmd):
                     continue
 
-                response = self._wait_for_response(idp, self.timeout)
+                response = await self._wait_for_response(idp, self.timeout)
 
                 if response:
                     if idp_sync_attempt > 0 and self.verbose:
@@ -367,7 +335,7 @@ class PicoClient:
 
         return None
 
-    def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
+    async def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
         """Wait for responses matching the given idp"""
         got_ack = False
         end_time = time.time() + timeout
@@ -386,7 +354,10 @@ class PicoClient:
                     return None
 
             try:
-                response, addr = self._response_queue.get(timeout=min(remaining, 0.5))
+                response, addr = await asyncio.wait_for(
+                    self._response_queue.get(),
+                    timeout=min(remaining, 0.5)
+                )
 
                 if response.get("idp") != idp:
                     continue
@@ -402,15 +373,15 @@ class PicoClient:
                         print(f"  ✓ Response received (idp:{idp})")
 
                     ack = {"idp": idp, "frm": "app", "res": 99}
-                    self._send_udp_packet(ack)
+                    await self._send_udp_packet(ack)
                     return response
 
-            except Empty:
+            except asyncio.TimeoutError:
                 continue
 
         return None
 
-    def _set_on_off(self, turn_on: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def _set_on_off(self, turn_on: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
         """
         Turn the device on or off (internal implementation)
 
@@ -434,12 +405,12 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return self._execute_command_with_retry(cmd, retry)
+        return await self._execute_command_with_retry(cmd, retry)
 
 # ----------------------------
 # EXAMPLE USAGE
 # ----------------------------
-if __name__ == "__main__":
+async def main():
     device = PicoClient(
         ip="192.168.8.133",
         pin="1234",
@@ -448,8 +419,11 @@ if __name__ == "__main__":
         max_reconnect_attempts=3
     )
 
-    device.connect()
-    device.turn_off()
-    status = device.get_status()
-    print(f"Device {status}")
-    device.disconnect()
+    async with device:
+        await device.turn_on()
+        status = await device.get_status()
+        await device.change_operating_mode(DeviceModeEnum.CO2_RECOVERY)
+        print(f"Device {status}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
