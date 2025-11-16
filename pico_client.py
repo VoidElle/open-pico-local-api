@@ -429,24 +429,3 @@ class PicoClient:
         }
 
         return await self._execute_command_with_retry(cmd, retry)
-
-# ----------------------------
-# EXAMPLE USAGE
-# ----------------------------
-async def main():
-    device = PicoClient(
-        ip="192.168.8.133",
-        pin="1234",
-        verbose=True,
-        auto_reconnect=True,
-        max_reconnect_attempts=3
-    )
-
-    async with device:
-        await device.turn_on()
-        status = await device.get_status()
-        await device.change_operating_mode(DeviceModeEnum.CO2_RECOVERY)
-        print(f"Device {status}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
