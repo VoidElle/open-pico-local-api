@@ -582,28 +582,30 @@ async def smart_home_automation():
 ---
 
 ## 📦 Library Structure
-open-pico-local-api/  
-├── pico_client.py              # Main client class  
-├── enums/  
-│   ├── device_mode_enum.py     # Operating modes  
-│   ├── on_off_state_enum.py    # Power states  
-│   └── target_humidity_enum.py # Humidity levels  
-├── models/  
-│   ├── pico_device_model.py           # Complete device state  
-│   ├── device_info_model.py           # Device identification  
-│   ├── sensor_readings_model.py       # Sensor data  
-│   ├── operating_parameters_model.py  # Operating state  
-│   ├── parameter_arrays_model.py      # Parameter arrays  
-│   └── system_info_model.py           # System diagnostics  
-├── utils/  
-│   ├── pico_protocol.py        # UDP protocol handler  
-│   ├── auto_reconnect.py       # Reconnection decorator  
-│   └── constants.py            # Mode constants  
-└── exceptions/  
-├── connection_error.py  
-├── timeout_error.py  
-├── not_supported_error.py  
-└── pico_device_error.py  
+```
+open-pico-local-api/
+├── pico_client.py              # Main client class
+├── enums/
+│   ├── device_mode_enum.py     # Operating modes
+│   ├── on_off_state_enum.py    # Power states
+│   └── target_humidity_enum.py # Humidity levels
+├── models/
+│   ├── pico_device_model.py           # Complete device state
+│   ├── device_info_model.py           # Device identification
+│   ├── sensor_readings_model.py       # Sensor data
+│   ├── operating_parameters_model.py  # Operating state
+│   ├── parameter_arrays_model.py      # Parameter arrays
+│   └── system_info_model.py           # System diagnostics
+├── utils/
+│   ├── pico_protocol.py        # UDP protocol handler
+│   ├── auto_reconnect.py       # Reconnection decorator
+│   └── constants.py            # Mode constants
+└── exceptions/
+    ├── connection_error.py
+    ├── timeout_error.py
+    ├── not_supported_error.py
+    └── pico_device_error.py
+```
 
 ---
 
