@@ -35,9 +35,8 @@
 ---
 
 ## 📦 Installation
-```bash
-pip install open-pico-local-api
-```
+1. Clone this repository in your project
+2. Import PicoClient, and other relevant classes in your files
 
 ---
 
@@ -637,5 +636,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- 🐛 **Issues**: [Report a bug](https://github.com/yourusername/open-pico-local-api/issues)
+- 🐛 **Issues**: [Report a bug](https://github.com/VoidElle/open-pico-local-api/issues)
 
