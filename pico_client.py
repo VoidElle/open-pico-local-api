@@ -16,6 +16,7 @@ from exceptions.not_supported_error import NotSupportedError
 from exceptions.pico_device_error import PicoDeviceError
 from exceptions.connection_error import ConnectionError
 from exceptions.timeout_error import TimeoutError
+from models.command_response_model import CommandResponseModel
 
 from models.pico_device_model import PicoDeviceModel
 from utils.auto_reconnect import auto_reconnect
@@ -175,17 +176,17 @@ class PicoClient:
             return None
 
     @auto_reconnect
-    async def turn_on(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def turn_on(self, retry: bool = True) -> CommandResponseModel:
         """Turn the device on"""
         return await self._set_on_off(True, retry)
 
     @auto_reconnect
-    async def turn_off(self, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def turn_off(self, retry: bool = True) -> CommandResponseModel:
         """Turn the device off"""
         return await self._set_on_off(False, retry)
 
     @auto_reconnect
-    async def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> CommandResponseModel:
         """Change the device operating mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -201,10 +202,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
 
     @auto_reconnect
-    async def change_fan_speed(self, percentage: int, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
+    async def change_fan_speed(self, percentage: int, retry: bool = True, force=False) -> CommandResponseModel:
         """Change the fan speed"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -224,10 +226,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
 
     @auto_reconnect
-    async def set_night_mode(self, enable: bool, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
+    async def set_night_mode(self, enable: bool, retry: bool = True, force=False) -> CommandResponseModel:
         """Set night mode"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -246,10 +249,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
 
     @auto_reconnect
-    async def set_led_status(self, enable: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def set_led_status(self, enable: bool, retry: bool = True) -> CommandResponseModel:
         """Set LED status"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -261,10 +265,11 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
 
     @auto_reconnect
-    async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True, force=False) -> Optional[Dict[str, Any]]:
+    async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True, force=False) -> CommandResponseModel:
         """Set target humidity"""
         if not self._connected:
             raise ConnectionError("Not connected to device")
@@ -283,7 +288,8 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
 
     # ----------------------------
     # INTERNAL METHODS
@@ -404,7 +410,7 @@ class PicoClient:
 
         return None
 
-    async def _set_on_off(self, turn_on: bool, retry: bool = True) -> Optional[Dict[str, Any]]:
+    async def _set_on_off(self, turn_on: bool, retry: bool = True) -> CommandResponseModel:
         """
         Turn the device on or off (internal implementation)
 
@@ -428,4 +434,26 @@ class PicoClient:
             "pin": self.pin
         }
 
-        return await self._execute_command_with_retry(cmd, retry)
+        result = await self._execute_command_with_retry(cmd, retry)
+        return CommandResponseModel.from_dict(result)
+
+
+async def main():
+    # Initialize device with auto-reconnect
+    device = PicoClient(
+        ip="192.168.8.133",
+        pin="1234",
+        verbose=True,
+        auto_reconnect=True
+    )
+
+    # Use context manager for automatic cleanup
+    async with device:
+        while True:
+            status = await device.change_operating_mode(1)
+            print(f"✓ Status: {status}")
+            await asyncio.sleep(0.5)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
