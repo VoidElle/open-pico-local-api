@@ -40,9 +40,7 @@ class PicoClient:
             verbose: bool = False,
             auto_reconnect: bool = False,
             max_reconnect_attempts: int = 3,
-            reconnect_delay: float = 2.0,
-            shared_transport=None,
-            shared_protocol=None,
+            reconnect_delay: float = 2.0
     ):
         self.ip = ip
         self.pin = pin
@@ -58,17 +56,14 @@ class PicoClient:
         self._max_reconnect_attempts = max_reconnect_attempts
         self._reconnect_delay = reconnect_delay
 
-        # Shared socket support
-        self._shared_mode = shared_transport is not None
-        self._transport = shared_transport
-        self._protocol = shared_protocol
-
+        self._transport = None
+        self._protocol = None
         self._idp_counter = 1
         self._response_queue = asyncio.Queue()
         self._running = False
         self._listen_task = None
         self._lock = asyncio.Lock()
-        self._connected = self._shared_mode
+        self._connected = False
         self._event_callbacks = {}
 
     async def __aenter__(self):
@@ -98,19 +93,20 @@ class PicoClient:
             print(f"Auto-reconnect {status}")
 
     async def connect(self) -> None:
-        """Connect to the Pico"""
+        """
+        Connect to the Pico
+
+        Raises:
+            ConnectionError: If connection fails
+        """
         if self._connected:
             return
 
-        # If shared mode, don't create new socket
-        if self._shared_mode:
-            self._connected = True
-            return
-
         try:
+            # Using asyncio.get_running_loop() for Home Assistant compatibility
             loop = asyncio.get_running_loop()
 
-            # Create UDP endpoint (only if not shared)
+            # Create UDP endpoint
             self._transport, self._protocol = await loop.create_datagram_endpoint(
                 lambda: PicoProtocol(self._response_queue, self._event_callbacks, self.verbose),
                 local_addr=("0.0.0.0", self.local_port)
@@ -121,6 +117,8 @@ class PicoClient:
 
             if self.verbose:
                 print(f"✓ Connected to {self.ip}:{self.device_port}")
+                if self._auto_reconnect:
+                    print(f"  Auto-reconnect: enabled (max {self._max_reconnect_attempts} attempts)")
 
         except Exception as e:
             raise ConnectionError(f"Failed to connect: {e}")
@@ -129,8 +127,7 @@ class PicoClient:
         """Disconnect from the Pico"""
         self._running = False
 
-        # Don't close transport if in shared mode - ADD THIS CHECK
-        if self._transport and not self._shared_mode:
+        if self._transport:
             self._transport.close()
 
         self._connected = False
