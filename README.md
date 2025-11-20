@@ -8,6 +8,10 @@
 
 **[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples)**
 
+> [!CAUTION]
+> **Simultaneous multiple connections are not supported.**  This limitation arises from the Pico firmware, which uses a fixed UDP response port. When multiple clients attempt to connect whether from different event loops or threads port conflicts occur, resulting in unstable and unreliable behavior
+> As a consequence, multiple polling or control instances cannot operate concurrently. This makes the device incompatible with platforms like Home Assistant, which rely on parallel polling operations.
+
 ---
 
 ## ✨ Features
