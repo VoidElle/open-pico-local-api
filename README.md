@@ -4,12 +4,12 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/yourusername/open-pico-local-api)
+[![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](https://github.com/yourusername/open-pico-local-api)
 
 **[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples)**
 
 > [!IMPORTANT]
-> **Version 2.1.0 introduces multi-device support!** 🎉
+> **Version 2.0.0 introduces multi-device support!** 🎉
 > 
 > The library now supports **simultaneous control of multiple Pico devices** through a shared transport manager with IDP range allocation. This breakthrough feature enables:
 > - ✅ Multiple devices controlled from a single application
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
 ## 🔀 Multi-Device Support
 
-Version 2.1.0 introduces a **shared transport manager** that enables multiple Pico devices to be controlled simultaneously without UDP port conflicts.
+Version 2.0.0 introduces a **shared transport manager** that enables multiple Pico devices to be controlled simultaneously without UDP port conflicts.
 
 ### How It Works
 
