@@ -49,7 +49,7 @@ class PicoDeviceModel:
             PicoStatus instance
 
         Example:
-            >>> status = PicoDeviceModel.from_dict(device_response)
+            >>> status = PicoDeviceModel.from_dict(data)
             >>> print(status.sensors.temperature_celsius)
         """
         device_info = DeviceInfoModel(
@@ -69,8 +69,8 @@ class PicoDeviceModel:
         )
 
         sensors = SensorReadingsModel(
-            temperature=data.get("v_tmpr", 0.0),
-            humidity=data.get("v_umd", 0.0),
+            temperature=float(data.get("v_tmpr", 0.0)),
+            humidity=float(data.get("v_umd", 0.0)),
             air_quality=data.get("v_AirQ", 0),
             tvoc=data.get("v_Tvoc", 0),
             eco2=data.get("v_ECo2", 0),

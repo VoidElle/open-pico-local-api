@@ -2,20 +2,12 @@
 
 > *Asynchronous Python library for Tecnosystemi Pico IoT devices*
 
-[![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-orange.svg)](https://github.com/yourusername/open-pico-local-api)
+[![Version](https://img.shields.io/badge/version-2.1.0-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
+[![Tests](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml/badge.svg)](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml)
 
-**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples)**
-
-> [!IMPORTANT]
-> **Version 2.0.0 introduces multi-device support!** 🎉
-> 
-> The library now supports **simultaneous control of multiple Pico devices** through a shared transport manager with IDP range allocation. This breakthrough feature enables:
-> - ✅ Multiple devices controlled from a single application
-> - ✅ Concurrent polling without port conflicts
-> - ✅ **Home Assistant compatibility** and integration support
-> - ✅ Automatic IDP synchronization across devices
+**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Testing](#-testing)**
 
 ---
 
@@ -131,7 +123,8 @@ if __name__ == "__main__":
 ## 📚 Table of Contents
 
 - [Configuration](#️-configuration)
-- [Multi-Device Support](#-multi-device-support-new)
+- [Multi-Device Support](#-multi-device-support)
+- [Auto-Discovery](#-auto-discovery)
 - [Connection Management](#-connection-management)
 - [Device Control](#️-device-control)
   - [Power Control](#power-control)
@@ -144,6 +137,7 @@ if __name__ == "__main__":
 - [Data Models](#️-data-models)
 - [Exception Handling](#-exception-handling)
 - [Examples](#-examples)
+- [Testing](#-testing)
 - [Best Practices](#-best-practices)
 
 ---
@@ -168,8 +162,6 @@ if __name__ == "__main__":
 ---
 
 ## 🔀 Multi-Device Support
-
-Version 2.0.0 introduces a **shared transport manager** that enables multiple Pico devices to be controlled simultaneously without UDP port conflicts.
 
 ### How It Works
 
@@ -218,6 +210,58 @@ device2 = PicoClient(ip="192.168.1.101", pin="1234", device_id="bedroom")
 
 # Also works: auto-generated IDs
 device3 = PicoClient(ip="192.168.1.102", pin="1234")  # ID: "192.168.1.102:40070"
+```
+
+---
+
+## 🔍 Auto-Discovery
+
+`PicoAutoDiscovery` scans a subnet and returns the IPs of all Pico devices it finds. All traffic goes through `SharedTransportManager` (port 40069) — Pico devices are hardcoded to reply only to that port.
+
+### Basic Usage
+
+```python
+import asyncio
+from pico_auto_discovery import PicoAutoDiscovery
+
+async def main():
+    ips = await PicoAutoDiscovery.discover(pin="1234", subnet="192.168.1.0/24")
+    print(ips)  # ["192.168.1.42", "192.168.1.55"]
+
+asyncio.run(main())
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|:----:|:-------:|-------------|
+| **`pin`** ⭐ | `str` | *required* | PIN sent with each probe |
+| **`subnet`** ⭐ | `str` | *required* | CIDR range to scan (e.g. `"192.168.1.0/24"`) |
+| `device_port` | `int` | `40070` | UDP port Pico devices listen on |
+| `local_port` | `int` | `40069` | Local port for `SharedTransportManager` |
+| `scan_timeout` | `float` | `2.0` | Seconds to collect replies after probes are sent |
+| `max_concurrent` | `int` | `50` | Max simultaneous probes |
+| `verbose` | `bool` | `False` | Enable debug logging |
+
+**Returns:** sorted `List[str]` of discovered IP addresses.
+
+### Discovery + Connect
+
+```python
+async def auto_connect():
+    ips = await PicoAutoDiscovery.discover(pin="1234", subnet="192.168.1.0/24")
+    if not ips:
+        print("No devices found")
+        return
+
+    clients = [PicoClient(ip=ip, pin="1234") for ip in ips]
+    async with asyncio.TaskGroup() as tg:
+        for client in clients:
+            tg.create_task(client.connect())
+
+    statuses = await asyncio.gather(*[c.get_status() for c in clients])
+    for ip, status in zip(ips, statuses):
+        print(f"{ip}: {status.operating.mode.name}")
 ```
 
 ---
@@ -340,11 +384,7 @@ await device.change_fan_speed(75, force=True)
 **Parameters:**
 - `percentage` (int): Speed from 0-100
 - `retry` (bool): Enable retry logic
-- `force` (bool): Skip mode validation
-
-> ⚠️ **Note:** Only supported in certain operating modes: `HEAT_RECOVERY`, `EXTRACTION`, `IMMISSION`, `COMFORT_SUMMER`, `COMFORT_WINTER`
-
-> 🔥 **WARNING:** Using `force=True` bypasses mode compatibility checks and may cause the device to behave unexpectedly or reset its state. Use with caution and only when you understand the implications.
+- `force` (bool): Skip mode validation (only supported in `HEAT_RECOVERY`, `EXTRACTION`, `IMMISSION`, `COMFORT_SUMMER`, `COMFORT_WINTER`)
 
 ### Night Mode
 
@@ -561,14 +601,14 @@ The library provides custom exceptions for different scenarios:
 
 | Exception | Description |
 |-----------|-------------|
-| `ConnectionError` | Connection establishment or communication failures |
-| `TimeoutError` | Operation exceeded timeout duration |
+| `PicoConnectionError` | Connection establishment or communication failures |
+| `PicoTimeoutError` | Operation exceeded timeout duration |
 | `NotSupportedError` | Feature not supported in current operating mode |
-| `PicoDeviceError` | General device-related errors |
+| `PicoDeviceError` | General device-related errors (base class) |
 
 **Example:**
 ```python
-from exceptions.connection_error import ConnectionError
+from exceptions.pico_connection_error import PicoConnectionError
 from exceptions.not_supported_error import NotSupportedError
 
 async def safe_operation():
@@ -581,7 +621,7 @@ async def safe_operation():
     except NotSupportedError as e:
         print(f"⚠️  Feature not available: {e}")
         
-    except ConnectionError as e:
+    except PicoConnectionError as e:
         print(f"❌ Connection failed: {e}")
         
     finally:
@@ -795,8 +835,10 @@ async def smart_home_automation():
 ## 📦 Library Structure
 ```
 open-pico-local-api/
-├── pico_client.py                     # Main client class with shared transport
-├── shared_transport_manager.py        # Shared transport manager for multi-device
+├── pico_client.py                     # Main client class
+├── pico_auto_discovery.py             # Subnet-based device discovery
+├── shared_transport_manager.py        # Shared UDP transport for multi-device
+├── run_tests.sh                       # Local test runner script
 ├── enums/
 │   ├── device_mode_enum.py           # Operating modes
 │   ├── on_off_state_enum.py          # Power states
@@ -810,21 +852,67 @@ open-pico-local-api/
 │   ├── parameter_arrays_model.py     # Parameter arrays
 │   └── system_info_model.py          # System diagnostics
 ├── utils/
-│   └── constants.py                  # Mode constants
-└── exceptions/
-    ├── connection_error.py
-    ├── timeout_error.py
-    ├── not_supported_error.py
-    └── pico_device_error.py
+│   ├── auto_reconnect.py             # Auto-reconnect decorator
+│   ├── constants.py                  # Mode constants
+│   └── pico_protocol.py             # Base UDP protocol
+├── exceptions/
+│   ├── pico_connection_error.py
+│   ├── pico_timeout_error.py
+│   ├── not_supported_error.py
+│   └── pico_device_error.py
+└── tests/
+    ├── test_exceptions.py
+    ├── test_enums.py
+    ├── test_models.py
+    ├── test_shared_transport_manager.py
+    ├── test_pico_auto_discovery.py
+    ├── test_auto_reconnect.py
+    └── test_pico_protocol.py
 ```
 
 ---
 
 ## 📋 Requirements
 
-- **Python 3.7+**
+- **Python 3.11+**
 - **asyncio** support
 - **Local network access** to Pico device(s)
+- No third-party dependencies — stdlib only
+
+---
+
+## 🧪 Testing
+
+The library ships with a full unit test suite (96 tests) covering all modules. No third-party packages needed.
+
+### Run locally
+
+```bash
+./run_tests.sh
+```
+
+Or directly:
+
+```bash
+python3 -W all -m unittest discover -s tests -v
+```
+
+### CI
+
+Tests run automatically on every push and pull request via GitHub Actions, across Python 3.11, 3.12, and 3.13.
+
+### Coverage
+
+| Module | Tests |
+|--------|------:|
+| `exceptions/` | 10 |
+| `enums/` | 8 |
+| `models/` | 34 |
+| `shared_transport_manager.py` | 20 |
+| `pico_auto_discovery.py` | 12 |
+| `utils/auto_reconnect.py` | 6 |
+| `utils/pico_protocol.py` | 6 |
+| **Total** | **96** |
 
 ---
 

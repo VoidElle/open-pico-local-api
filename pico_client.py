@@ -12,6 +12,8 @@ from enums.device_mode_enum import DeviceModeEnum
 from enums.target_humidity_enum import TargetHumidityEnum
 from exceptions.not_supported_error import NotSupportedError
 from exceptions.pico_device_error import PicoDeviceError
+from exceptions.pico_connection_error import PicoConnectionError
+from exceptions.pico_timeout_error import PicoTimeoutError
 from models.command_response_model import CommandResponseModel
 from models.pico_device_model import PicoDeviceModel
 from shared_transport_manager import SharedTransportManager
@@ -97,7 +99,7 @@ class PicoClient:
         """
         Connect to the Pico device
 
-        If use_shared_transport is True, registers with SharedTransportManager.
+        If you use_shared_transport is True, registers with SharedTransportManager.
         Otherwise, creates a dedicated socket (legacy mode).
         """
         if self._connected:
@@ -138,7 +140,7 @@ class PicoClient:
             self._connected = True
 
         except Exception as e:
-            raise ConnectionError(f"Failed to connect: {e}")
+            raise PicoConnectionError(f"Failed to connect: {e}")
 
     async def disconnect(self) -> None:
         """Disconnect from the Pico"""
@@ -160,7 +162,7 @@ class PicoClient:
     async def get_status(self, retry: bool = True) -> PicoDeviceModel:
         """Get device status"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         cmd = {
             "cmd": "stato_sync",
@@ -170,7 +172,7 @@ class PicoClient:
 
         response = await self._execute_command_with_retry(cmd, retry)
         if not response:
-            raise TimeoutError("Failed to get device status")
+            raise PicoTimeoutError("Failed to get device status")
 
         try:
             return PicoDeviceModel.from_dict(response)
@@ -188,7 +190,7 @@ class PicoClient:
     async def change_operating_mode(self, mode: Union[DeviceModeEnum, int], retry: bool = True) -> CommandResponseModel:
         """Change the device operating mode"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         mode_value = int(mode)
 
@@ -201,12 +203,14 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def change_fan_speed(self, percentage: int, retry: bool = True, force=False) -> CommandResponseModel:
         """Change the fan speed"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         if not force:
             current_status = await self.get_status(retry=retry)
@@ -223,12 +227,14 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_night_mode(self, enable: bool, retry: bool = True, force=False) -> CommandResponseModel:
         """Set night mode"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         if not force:
             current_status = await self.get_status(retry=retry)
@@ -243,12 +249,14 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_led_status(self, enable: bool, retry: bool = True) -> CommandResponseModel:
         """Set LED status"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         cmd = {
             "led_on_off_breve": 1 if enable else 2,
@@ -258,13 +266,15 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True,
                                   force=False) -> CommandResponseModel:
         """Set target humidity"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         if not force:
             current_status = await self.get_status(retry=retry)
@@ -280,6 +290,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def reset_maintenance(self, retry: bool = True) -> CommandResponseModel:
@@ -290,7 +302,7 @@ class PicoClient:
         for that specific unit.
         """
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         # Get current status to get existing maintenance array
         current_status = await self.get_status(retry=retry)
@@ -319,6 +331,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     # ----------------------------
@@ -416,14 +430,14 @@ class PicoClient:
         got_ack = False
         end_time = time.time() + timeout
         ack_timeout = 2.0
-        ack_received_time = None
+        ack_received_time: Optional[float] = None
 
         while time.time() < end_time:
             remaining = end_time - time.time()
             if remaining <= 0:
                 break
 
-            if got_ack and ack_received_time:
+            if got_ack and ack_received_time is not None:
                 if time.time() - ack_received_time > ack_timeout:
                     if self.verbose:
                         _LOGGER.debug(f"  ⚠ [{self.device_id}] ACK received but no status - IDP may be out of sync")
@@ -460,7 +474,7 @@ class PicoClient:
     async def _set_on_off(self, turn_on: bool, retry: bool = True) -> CommandResponseModel:
         """Turn the device on or off"""
         if not self._connected:
-            raise ConnectionError("Not connected to device")
+            raise PicoConnectionError("Not connected to device")
 
         cmd = {
             "on_off": 1 if turn_on else 2,
@@ -470,4 +484,6 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
