@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 from typing import Dict, Callable, Any
 
@@ -37,7 +38,7 @@ class PicoProtocol(asyncio.DatagramProtocol):
         """Run callback in async context"""
         try:
             callback = self.event_callbacks[cmd]
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 await callback(response)
             else:
                 callback(response)

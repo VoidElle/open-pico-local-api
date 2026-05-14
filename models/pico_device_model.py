@@ -49,7 +49,7 @@ class PicoDeviceModel:
             PicoStatus instance
 
         Example:
-            >>> status = PicoDeviceModel.from_dict(device_response)
+            >>> status = PicoDeviceModel.from_dict(data)
             >>> print(status.sensors.temperature_celsius)
         """
         device_info = DeviceInfoModel(

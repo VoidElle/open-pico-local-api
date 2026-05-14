@@ -2,11 +2,12 @@
 
 > *Asynchronous Python library for Tecnosystemi Pico IoT devices*
 
-[![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.1.0-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
+[![Tests](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml/badge.svg)](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml)
 
-**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples)**
+**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Testing](#-testing)**
 
 ---
 
@@ -136,6 +137,7 @@ if __name__ == "__main__":
 - [Data Models](#️-data-models)
 - [Exception Handling](#-exception-handling)
 - [Examples](#-examples)
+- [Testing](#-testing)
 - [Best Practices](#-best-practices)
 
 ---
@@ -599,14 +601,14 @@ The library provides custom exceptions for different scenarios:
 
 | Exception | Description |
 |-----------|-------------|
-| `ConnectionError` | Connection establishment or communication failures |
-| `TimeoutError` | Operation exceeded timeout duration |
+| `PicoConnectionError` | Connection establishment or communication failures |
+| `PicoTimeoutError` | Operation exceeded timeout duration |
 | `NotSupportedError` | Feature not supported in current operating mode |
-| `PicoDeviceError` | General device-related errors |
+| `PicoDeviceError` | General device-related errors (base class) |
 
 **Example:**
 ```python
-from exceptions.connection_error import ConnectionError
+from exceptions.pico_connection_error import PicoConnectionError
 from exceptions.not_supported_error import NotSupportedError
 
 async def safe_operation():
@@ -619,7 +621,7 @@ async def safe_operation():
     except NotSupportedError as e:
         print(f"⚠️  Feature not available: {e}")
         
-    except ConnectionError as e:
+    except PicoConnectionError as e:
         print(f"❌ Connection failed: {e}")
         
     finally:
@@ -836,6 +838,7 @@ open-pico-local-api/
 ├── pico_client.py                     # Main client class
 ├── pico_auto_discovery.py             # Subnet-based device discovery
 ├── shared_transport_manager.py        # Shared UDP transport for multi-device
+├── run_tests.sh                       # Local test runner script
 ├── enums/
 │   ├── device_mode_enum.py           # Operating modes
 │   ├── on_off_state_enum.py          # Power states
@@ -849,21 +852,67 @@ open-pico-local-api/
 │   ├── parameter_arrays_model.py     # Parameter arrays
 │   └── system_info_model.py          # System diagnostics
 ├── utils/
-│   └── constants.py                  # Mode constants
-└── exceptions/
-    ├── connection_error.py
-    ├── timeout_error.py
-    ├── not_supported_error.py
-    └── pico_device_error.py
+│   ├── auto_reconnect.py             # Auto-reconnect decorator
+│   ├── constants.py                  # Mode constants
+│   └── pico_protocol.py             # Base UDP protocol
+├── exceptions/
+│   ├── pico_connection_error.py
+│   ├── pico_timeout_error.py
+│   ├── not_supported_error.py
+│   └── pico_device_error.py
+└── tests/
+    ├── test_exceptions.py
+    ├── test_enums.py
+    ├── test_models.py
+    ├── test_shared_transport_manager.py
+    ├── test_pico_auto_discovery.py
+    ├── test_auto_reconnect.py
+    └── test_pico_protocol.py
 ```
 
 ---
 
 ## 📋 Requirements
 
-- **Python 3.7+**
+- **Python 3.11+**
 - **asyncio** support
 - **Local network access** to Pico device(s)
+- No third-party dependencies — stdlib only
+
+---
+
+## 🧪 Testing
+
+The library ships with a full unit test suite (96 tests) covering all modules. No third-party packages needed.
+
+### Run locally
+
+```bash
+./run_tests.sh
+```
+
+Or directly:
+
+```bash
+python3 -W all -m unittest discover -s tests -v
+```
+
+### CI
+
+Tests run automatically on every push and pull request via GitHub Actions, across Python 3.11, 3.12, and 3.13.
+
+### Coverage
+
+| Module | Tests |
+|--------|------:|
+| `exceptions/` | 10 |
+| `enums/` | 8 |
+| `models/` | 34 |
+| `shared_transport_manager.py` | 20 |
+| `pico_auto_discovery.py` | 12 |
+| `utils/auto_reconnect.py` | 6 |
+| `utils/pico_protocol.py` | 6 |
+| **Total** | **96** |
 
 ---
 

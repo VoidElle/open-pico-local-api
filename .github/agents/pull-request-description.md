@@ -8,7 +8,7 @@ Generate clear, structured PR descriptions for this async Python UDP IoT library
 ### Title format
 `[scope]: short imperative description`
 
-Scopes: `client`, `transport`, `models`, `enums`, `exceptions`, `utils`, `docs`, `chore`
+Scopes: `client`, `transport`, `models`, `enums`, `exceptions`, `utils`, `tests`, `docs`, `chore`
 
 ### Body structure
 ```
@@ -31,3 +31,6 @@ Scopes: `client`, `transport`, `models`, `enums`, `exceptions`, `utils`, `docs`,
 - Mode guards (`get_status()` checks before commands) are safety-critical; flag if removed or weakened
 - `from_dict()` model changes may break downstream Home Assistant integrations — note field renames
 - Async context manager (`__aenter__`/`__aexit__`) changes must ensure `disconnect()` always runs
+- Exception class names: `PicoConnectionError`, `PicoTimeoutError`, `PicoDeviceError`, `NotSupportedError` — never use bare `ConnectionError`/`TimeoutError`
+- After any code change, all 96 tests must pass: `./run_tests.sh` or CI will catch it
+- IPv6 subnets are not supported in `PicoAutoDiscovery` — raises `ValueError` by design

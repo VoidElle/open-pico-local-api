@@ -7,9 +7,12 @@ responses based on IDP ranges assigned to each device.
 
 import logging
 import asyncio
+import inspect
 import json
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
+
+from exceptions.pico_connection_error import PicoConnectionError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,9 +54,9 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
             # Route response to correct device based on IDP
             idp = response.get('idp')
             if idp is not None:
-                device_id = self.transport_manager._find_device_by_idp(idp)
+                device_id = self.transport_manager.find_device_by_idp(idp)
                 if device_id:
-                    registration = self.transport_manager._devices[device_id]
+                    registration = self.transport_manager.get_device_registration(device_id)
                     # Put in device's response queue
                     registration.response_queue.put_nowait((response, addr))
 
@@ -63,7 +66,7 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
                         callback = registration.event_callbacks[cmd]
                         asyncio.create_task(self._run_callback(callback, response))
                 else:
-                    unmatched_queue = self.transport_manager._unmatched_queue
+                    unmatched_queue = self.transport_manager.unmatched_queue
                     if unmatched_queue is not None:
                         unmatched_queue.put_nowait((response, addr))
                     elif self.verbose:
@@ -79,10 +82,11 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
             if self.verbose:
                 print(f"⚠ Error processing datagram: {e}")
 
-    async def _run_callback(self, callback, response):
+    @staticmethod
+    async def _run_callback(callback, response):
         """Run callback in async context"""
         try:
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 await callback(response)
             else:
                 callback(response)
@@ -174,7 +178,7 @@ class SharedTransportManager:
                     print(f"✓ Shared transport initialized on port {local_port}")
 
             except Exception as e:
-                raise ConnectionError(f"Failed to initialize shared transport: {e}")
+                raise PicoConnectionError(f"Failed to initialize shared transport: {e}")
 
     async def register_device(
         self,
@@ -234,7 +238,7 @@ class SharedTransportManager:
             if self._verbose:
                 print(f"✓ Unregistered device '{device_id}'")
 
-    def _find_device_by_idp(self, idp: int) -> Optional[str]:
+    def find_device_by_idp(self, idp: int) -> Optional[str]:
         """Find which device an IDP belongs to"""
         for device_id, reg in self._devices.items():
             if reg.idp_range_start <= idp < (reg.idp_range_start + reg.idp_range_size):
@@ -257,6 +261,15 @@ class SharedTransportManager:
         if not self._initialized:
             raise RuntimeError("Transport not initialized.")
         self._transport.sendto(data, addr)
+
+    def get_device_registration(self, device_id: str) -> Optional['DeviceRegistration']:
+        """Return the registration for *device_id*, or None if not found."""
+        return self._devices.get(device_id)
+
+    @property
+    def unmatched_queue(self) -> Optional[asyncio.Queue]:
+        """Queue that receives packets with no registered IDP owner."""
+        return self._unmatched_queue
 
     def set_unmatched_queue(self, queue: asyncio.Queue) -> None:
         """Route packets with no registered IDP owner into *queue* (used by discovery)."""

@@ -2,6 +2,8 @@ import socket
 import time
 from functools import wraps
 
+from exceptions.pico_connection_error import PicoConnectionError
+
 
 def auto_reconnect(func):
     """
@@ -29,7 +31,7 @@ def auto_reconnect(func):
 
                 return func(self, *args, **kwargs)
 
-            except (ConnectionError, OSError, socket.error) as e:
+            except (PicoConnectionError, OSError, socket.error) as e:
                 if attempt < max_attempts - 1:
                     if self.verbose:
                         print(
@@ -38,7 +40,7 @@ def auto_reconnect(func):
                     # Clean up current connection
                     try:
                         self.disconnect()
-                    except:
+                    except (PicoConnectionError, OSError, socket.error):
                         pass
 
                     # Wait before reconnecting
@@ -53,15 +55,15 @@ def auto_reconnect(func):
                         if self.verbose:
                             print(f"✗ Reconnection attempt {attempt + 1} failed: {reconnect_error}")
                         if attempt == max_attempts - 2:
-                            raise ConnectionError(
+                            raise PicoConnectionError(
                                 f"Failed to reconnect after {max_attempts} attempts. Last error: {reconnect_error}"
                             )
                 else:
-                    raise ConnectionError(
+                    raise PicoConnectionError(
                         f"Failed after {max_attempts} reconnection attempts. Last error: {e}"
                     )
 
-            except Exception as e:
+            except Exception:
                 # For non-connection errors, don't retry
                 raise
 

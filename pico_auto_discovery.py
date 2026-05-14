@@ -149,9 +149,12 @@ class PicoAutoDiscovery:
         verbose: bool,
     ) -> None:
         try:
-            network: IPv4Network = ip_network(subnet, strict=False)
+            network = ip_network(subnet, strict=False)
         except ValueError as e:
             raise ValueError(f"Invalid subnet '{subnet}': {e}")
+
+        if not isinstance(network, IPv4Network):
+            raise ValueError(f"Only IPv4 subnets are supported, got: {subnet}")
 
         hosts = list(network.hosts())
         semaphore = asyncio.Semaphore(max_concurrent)
