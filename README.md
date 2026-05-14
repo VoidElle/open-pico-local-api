@@ -40,8 +40,29 @@
 ---
 
 ## 📦 Installation
+
+### pip (recommended)
+
+Install directly from a GitHub tag — no need to copy source files:
+
+```bash
+pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.2.1"
+```
+
+### Home Assistant integration
+
+Add to your integration's `manifest.json` and Home Assistant will install the library automatically when the integration loads:
+
+```json
+"requirements": [
+  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.2.1"
+]
+```
+
+### Manual
+
 1. Clone this repository in your project
-2. Import PicoClient, and other relevant classes in your files
+2. Import `PicoClient` and other relevant classes in your files
 
 ---
 
