@@ -201,6 +201,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def change_fan_speed(self, percentage: int, retry: bool = True, force=False) -> CommandResponseModel:
@@ -223,6 +225,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_night_mode(self, enable: bool, retry: bool = True, force=False) -> CommandResponseModel:
@@ -243,6 +247,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_led_status(self, enable: bool, retry: bool = True) -> CommandResponseModel:
@@ -258,6 +264,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def set_target_humidity(self, target_humidity: TargetHumidityEnum, retry: bool = True,
@@ -280,6 +288,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     async def reset_maintenance(self, retry: bool = True) -> CommandResponseModel:
@@ -319,6 +329,8 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
 
     # ----------------------------
@@ -416,14 +428,14 @@ class PicoClient:
         got_ack = False
         end_time = time.time() + timeout
         ack_timeout = 2.0
-        ack_received_time = None
+        ack_received_time: Optional[float] = None
 
         while time.time() < end_time:
             remaining = end_time - time.time()
             if remaining <= 0:
                 break
 
-            if got_ack and ack_received_time:
+            if got_ack and ack_received_time is not None:
                 if time.time() - ack_received_time > ack_timeout:
                     if self.verbose:
                         _LOGGER.debug(f"  ⚠ [{self.device_id}] ACK received but no status - IDP may be out of sync")
@@ -470,4 +482,6 @@ class PicoClient:
         }
 
         result = await self._execute_command_with_retry(cmd, retry)
+        if result is None:
+            raise TimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)

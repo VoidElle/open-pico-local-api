@@ -26,6 +26,12 @@ Async Python library (asyncio) for controlling Tecnosystemi Pico HVAC/ventilatio
 - Models use `from_dict(response)` factory methods
 - Guard every public method with `if not self._connected: raise ConnectionError(...)`
 
+## Auto-Discovery
+`PicoAutoDiscovery.discover(pin, subnet, ...)` in `pico_auto_discovery.py` returns `List[str]` of discovered IPs.  
+Strategy: concurrent per-IP scan of the CIDR subnet provided.  
+**All traffic uses `SharedTransportManager` (port 40069)** — Pico devices are hardcoded by the manufacturer to reply only to port 40069. Discovery uses IDP=0 (never allocated to any `PicoClient` range) so the manager routes those replies into a temporary `unmatched_queue`.  
+Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
+
 ## Adding a New Command
 1. Add enum value if needed in `enums/`
 2. Build `cmd` dict with required keys + `"cmd": "upd_pico"`, `"frm": "app"`, `"pin": self.pin`

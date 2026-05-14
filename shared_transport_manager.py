@@ -63,7 +63,10 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
                         callback = registration.event_callbacks[cmd]
                         asyncio.create_task(self._run_callback(callback, response))
                 else:
-                    if self.verbose:
+                    unmatched_queue = self.transport_manager._unmatched_queue
+                    if unmatched_queue is not None:
+                        unmatched_queue.put_nowait((response, addr))
+                    elif self.verbose:
                         print(f"⚠ No device found for IDP {idp}")
             else:
                 if self.verbose:
@@ -127,6 +130,7 @@ class SharedTransportManager:
         self._next_idp_range = 1  # Start IDP allocation from 1
         self._idp_range_size = 10000  # Allocate 10k IDPs per device
         self._init_lock = asyncio.Lock()  # Lock for thread-safe initialization
+        self._unmatched_queue: Optional[asyncio.Queue] = None  # Receives packets with no registered IDP owner
 
     @classmethod
     async def get_instance(cls):
@@ -199,7 +203,7 @@ class SharedTransportManager:
         if device_id in self._devices:
             # Already registered, return existing range
             reg = self._devices[device_id]
-            return (reg.idp_range_start, reg.idp_range_size)
+            return reg.idp_range_start, reg.idp_range_size
 
         # Allocate IDP range for this device
         idp_range_start = self._next_idp_range
@@ -221,7 +225,7 @@ class SharedTransportManager:
             print(f"✓ Registered device '{device_id}' at {ip}:{port}")
             print(f"  IDP range: {idp_range_start} - {idp_range_start + self._idp_range_size - 1}")
 
-        return (idp_range_start, self._idp_range_size)
+        return idp_range_start, self._idp_range_size
 
     async def unregister_device(self, device_id: str):
         """Unregister a device"""
@@ -247,6 +251,20 @@ class SharedTransportManager:
 
         if self._verbose:
             print(f"→ SENT to {device_id} ({registration.ip}:{registration.port})")
+
+    def send_raw(self, data: bytes, addr: Tuple[str, int]) -> None:
+        """Send raw bytes to an arbitrary address (used by discovery)."""
+        if not self._initialized:
+            raise RuntimeError("Transport not initialized.")
+        self._transport.sendto(data, addr)
+
+    def set_unmatched_queue(self, queue: asyncio.Queue) -> None:
+        """Route packets with no registered IDP owner into *queue* (used by discovery)."""
+        self._unmatched_queue = queue
+
+    def clear_unmatched_queue(self) -> None:
+        """Stop routing unmatched packets."""
+        self._unmatched_queue = None
 
     async def shutdown(self):
         """Shutdown the shared transport"""
