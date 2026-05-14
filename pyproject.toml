@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-pico-local-api"
-version = "2.2.0"
+version = "2.2.1"
 description = "Async Python library for Tecnosystemi Pico HVAC/ventilation IoT devices"
 readme = "README.md"
 license = { file = "LICENSE" }
