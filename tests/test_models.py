@@ -1,13 +1,13 @@
 """Tests for all model classes."""
 import unittest
 
-from enums.device_mode_enum import DeviceModeEnum
-from enums.on_off_state_enum import OnOffStateEnum
-from enums.target_humidity_enum import TargetHumidityEnum
-from models.command_response_model import CommandResponseModel
-from models.pico_device_model import PicoDeviceModel
-from models.sensor_readings_model import SensorReadingsModel
-from models.operating_parameters_model import OperatingParametersModel
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.on_off_state_enum import OnOffStateEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.models.command_response_model import CommandResponseModel
+from open_pico_local_api.models.pico_device_model import PicoDeviceModel
+from open_pico_local_api.models.sensor_readings_model import SensorReadingsModel
+from open_pico_local_api.models.operating_parameters_model import OperatingParametersModel
 
 
 # Minimal realistic device payload

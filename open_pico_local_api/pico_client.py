@@ -8,16 +8,16 @@ import json
 import time
 from typing import Optional, Dict, Any, Union
 
-from enums.device_mode_enum import DeviceModeEnum
-from enums.target_humidity_enum import TargetHumidityEnum
-from exceptions.not_supported_error import NotSupportedError
-from exceptions.pico_device_error import PicoDeviceError
-from exceptions.pico_connection_error import PicoConnectionError
-from exceptions.pico_timeout_error import PicoTimeoutError
-from models.command_response_model import CommandResponseModel
-from models.pico_device_model import PicoDeviceModel
-from shared_transport_manager import SharedTransportManager
-from utils.constants import HUMIDITY_SELECTOR_PRESET_MODES, MODULAR_FAN_SPEED_PRESET_MODES
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.exceptions.not_supported_error import NotSupportedError
+from open_pico_local_api.exceptions.pico_device_error import PicoDeviceError
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.exceptions.pico_timeout_error import PicoTimeoutError
+from open_pico_local_api.models.command_response_model import CommandResponseModel
+from open_pico_local_api.models.pico_device_model import PicoDeviceModel
+from open_pico_local_api.shared_transport_manager import SharedTransportManager
+from open_pico_local_api.utils.constants import HUMIDITY_SELECTOR_PRESET_MODES, MODULAR_FAN_SPEED_PRESET_MODES
 
 _LOGGER = logging.getLogger(__name__)
 __version__ = "2.1.0"

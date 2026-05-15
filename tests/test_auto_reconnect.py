@@ -2,8 +2,8 @@
 import unittest
 from unittest.mock import MagicMock
 
-from exceptions.pico_connection_error import PicoConnectionError
-from utils.auto_reconnect import auto_reconnect
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.utils.auto_reconnect import auto_reconnect
 
 
 def _make_client(auto_reconnect_enabled=True, max_attempts=3, delay=0.0):

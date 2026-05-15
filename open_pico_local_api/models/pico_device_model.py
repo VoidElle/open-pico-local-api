@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 from typing import Dict, Any
 
-from enums.device_mode_enum import DeviceModeEnum
-from enums.on_off_state_enum import OnOffStateEnum
-from enums.target_humidity_enum import TargetHumidityEnum
-from models.device_info_model import DeviceInfoModel
-from models.operating_parameters_model import OperatingParametersModel
-from models.parameter_arrays_model import ParameterArraysModel
-from models.sensor_readings_model import SensorReadingsModel
-from models.system_info_model import SystemInfoModel
-from utils.constants import MODULAR_FAN_SPEED_PRESET_MODES, HUMIDITY_SELECTOR_PRESET_MODES
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.on_off_state_enum import OnOffStateEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.models.device_info_model import DeviceInfoModel
+from open_pico_local_api.models.operating_parameters_model import OperatingParametersModel
+from open_pico_local_api.models.parameter_arrays_model import ParameterArraysModel
+from open_pico_local_api.models.sensor_readings_model import SensorReadingsModel
+from open_pico_local_api.models.system_info_model import SystemInfoModel
+from open_pico_local_api.utils.constants import MODULAR_FAN_SPEED_PRESET_MODES, HUMIDITY_SELECTOR_PRESET_MODES
 
 
 @dataclass

@@ -2,8 +2,8 @@
 import unittest
 from typing import Any, cast
 
-from pico_auto_discovery import _build_probe, _is_valid_pico_response, PicoAutoDiscovery
-from shared_transport_manager import SharedTransportManager
+from open_pico_local_api.pico_auto_discovery import _build_probe, _is_valid_pico_response, PicoAutoDiscovery
+from open_pico_local_api.shared_transport_manager import SharedTransportManager
 import json
 import asyncio
 

@@ -13,7 +13,7 @@ import logging
 from ipaddress import ip_network, IPv4Network
 from typing import Any, Dict, List, Set
 
-from shared_transport_manager import SharedTransportManager
+from open_pico_local_api.shared_transport_manager import SharedTransportManager
 
 _LOGGER = logging.getLogger(__name__)
 

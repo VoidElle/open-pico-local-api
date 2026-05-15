@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
 
 
 @dataclass

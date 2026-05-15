@@ -2,7 +2,7 @@ import socket
 import time
 from functools import wraps
 
-from exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
 
 
 def auto_reconnect(func):

@@ -4,8 +4,8 @@ import inspect
 import json
 import unittest
 
-import utils.pico_protocol as pico_protocol_module
-from utils.pico_protocol import PicoProtocol
+import open_pico_local_api.utils.pico_protocol as pico_protocol_module
+from open_pico_local_api.utils.pico_protocol import PicoProtocol
 
 
 class TestPicoProtocol(unittest.IsolatedAsyncioTestCase):

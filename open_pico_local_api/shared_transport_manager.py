@@ -12,7 +12,7 @@ import json
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
 
-from exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
 
 _LOGGER = logging.getLogger(__name__)
 

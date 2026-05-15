@@ -1,9 +1,9 @@
 """Tests for all enum classes."""
 import unittest
 
-from enums.device_mode_enum import DeviceModeEnum
-from enums.on_off_state_enum import OnOffStateEnum
-from enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.on_off_state_enum import OnOffStateEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
 
 
 class TestDeviceModeEnum(unittest.TestCase):

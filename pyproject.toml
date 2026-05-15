@@ -21,11 +21,4 @@ classifiers = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["enums*", "exceptions*", "models*", "utils*"]
-
-[tool.setuptools]
-py-modules = [
-    "pico_client",
-    "pico_auto_discovery",
-    "shared_transport_manager",
-]
+include = ["open_pico_local_api*"]

@@ -1,5 +1,5 @@
 # Preset modes that support the fan speed control
-from enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
 
 MODULAR_FAN_SPEED_PRESET_MODES = [
     DeviceModeEnum.HEAT_RECOVERY,

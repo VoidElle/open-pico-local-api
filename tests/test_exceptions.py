@@ -1,9 +1,9 @@
 """Tests for exception hierarchy."""
 import unittest
 
-from exceptions.pico_device_error import PicoDeviceError
-from exceptions.pico_connection_error import PicoConnectionError
-from exceptions.pico_timeout_error import PicoTimeoutError
+from open_pico_local_api.exceptions.pico_device_error import PicoDeviceError
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.exceptions.pico_timeout_error import PicoTimeoutError
 
 
 class TestExceptionHierarchy(unittest.TestCase):

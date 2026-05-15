@@ -5,7 +5,7 @@ import json
 import unittest
 import unittest.mock
 
-from shared_transport_manager import SharedTransportManager, SharedPicoProtocol
+from open_pico_local_api.shared_transport_manager import SharedTransportManager, SharedPicoProtocol
 
 
 class TestSharedTransportManagerUnit(unittest.IsolatedAsyncioTestCase):
@@ -180,7 +180,7 @@ class TestSharedPicoProtocol(unittest.IsolatedAsyncioTestCase):
 
     async def test_uses_inspect_iscoroutinefunction(self):
         """Verify the module uses inspect.iscoroutinefunction, not asyncio's deprecated version."""
-        import shared_transport_manager as stm
+        import open_pico_local_api.shared_transport_manager as stm
         source = inspect.getsource(stm)
         self.assertIn("inspect.iscoroutinefunction", source)
         self.assertNotIn("asyncio.iscoroutinefunction", source)
