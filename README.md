@@ -71,8 +71,8 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 ### Single Device
 ```python
 import asyncio
-from pico_client import PicoClient
-from enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.pico_client import PicoClient
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
 
 async def main():
     # Initialize device with shared transport (default)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
 ### Multiple Devices
 ```python
 import asyncio
-from pico_client import PicoClient
+from open_pico_local_api.pico_client import PicoClient
 
 async def main():
     # Create multiple device clients
@@ -243,7 +243,7 @@ device3 = PicoClient(ip="192.168.1.102", pin="1234")  # ID: "192.168.1.102:40070
 
 ```python
 import asyncio
-from pico_auto_discovery import PicoAutoDiscovery
+from open_pico_local_api.pico_auto_discovery import PicoAutoDiscovery
 
 async def main():
     ips = await PicoAutoDiscovery.discover(pin="1234", subnet="192.168.1.0/24")
@@ -372,7 +372,7 @@ await device.turn_off()
 
 Change the device operating mode.
 ```python
-from enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
 
 await device.change_operating_mode(DeviceModeEnum.CO2_RECOVERY)
 ```
@@ -445,7 +445,7 @@ await device.set_led_status(True)
 
 Set target humidity level.
 ```python
-from enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
 
 await device.set_target_humidity(TargetHumidityEnum.FIFTY_PERCENT)
 
@@ -629,8 +629,8 @@ The library provides custom exceptions for different scenarios:
 
 **Example:**
 ```python
-from exceptions.pico_connection_error import PicoConnectionError
-from exceptions.not_supported_error import NotSupportedError
+from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
+from open_pico_local_api.exceptions.not_supported_error import NotSupportedError
 
 async def safe_operation():
     device = PicoClient(ip="192.168.1.100", pin="1234")
