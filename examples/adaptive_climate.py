@@ -14,6 +14,10 @@ Usage:
     python3 adaptive_climate.py --ip 192.168.1.100 --pin 1234 --loop --interval 60
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import asyncio
 import argparse
 

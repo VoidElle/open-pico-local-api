@@ -10,6 +10,10 @@ Usage:
     python3 maintenance.py --ip 192.168.1.100 --pin 1234 --force
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import asyncio
 import argparse
 
