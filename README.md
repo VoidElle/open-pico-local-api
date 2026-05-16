@@ -653,179 +653,8 @@ async def safe_operation():
 
 ## 💡 Examples
 
-### Basic Device Control
-
-Simple example showing basic operations.
-```python
-async def basic_control():
-    async with PicoClient(ip="192.168.1.100", pin="1234", device_id="main") as device:
-        # Turn on and set mode
-        await device.turn_on()
-        await device.change_operating_mode(DeviceModeEnum.HEAT_RECOVERY)
-        
-        # Check status
-        status = await device.get_status()
-        print(f"Current mode: {status.operating.mode}")
-```
-
-### Multi-Device Control
-
-Control and monitor multiple devices concurrently.
-```python
-async def multi_device_control():
-    # Create multiple device clients
-    devices = {
-        "living_room": PicoClient(ip="192.168.1.100", pin="1234", device_id="living_room"),
-        "bedroom": PicoClient(ip="192.168.1.101", pin="1234", device_id="bedroom"),
-        "kitchen": PicoClient(ip="192.168.1.102", pin="1234", device_id="kitchen"),
-    }
-    
-    # Connect all devices
-    async with devices["living_room"], devices["bedroom"], devices["kitchen"]:
-        # Turn on all devices concurrently
-        await asyncio.gather(
-            *[dev.turn_on() for dev in devices.values()]
-        )
-        
-        # Set different modes for different rooms
-        await asyncio.gather(
-            devices["living_room"].change_operating_mode(DeviceModeEnum.COMFORT_WINTER),
-            devices["bedroom"].change_operating_mode(DeviceModeEnum.HEAT_RECOVERY),
-            devices["kitchen"].change_operating_mode(DeviceModeEnum.HUMIDITY_EXTRACTION)
-        )
-        
-        # Monitor all devices
-        while True:
-            statuses = await asyncio.gather(
-                *[dev.get_status() for dev in devices.values()],
-                return_exceptions=True
-            )
-            
-            print(f"\n{'='*60}")
-            for room_name, status in zip(devices.keys(), statuses):
-                if isinstance(status, Exception):
-                    print(f"{room_name}: ERROR - {status}")
-                else:
-                    print(f"{room_name}: {status.sensors.temperature_celsius}°C, "
-                          f"{status.sensors.humidity_percent}%, "
-                          f"{status.operating.mode.name}")
-            print(f"{'='*60}\n")
-            
-            await asyncio.sleep(30)
-```
-
-### Advanced Configuration
-
-Example with advanced settings and multiple operations.
-```python
-async def advanced_setup():
-    device = PicoClient(
-        ip="192.168.1.100",
-        pin="1234",
-        device_id="main_unit",
-        verbose=True,
-        timeout=10,
-        retry_attempts=5
-    )
-    
-    async with device:
-        # Enable night mode for quiet operation
-        await device.set_night_mode(True)
-        
-        # Turn off LEDs
-        await device.set_led_status(False)
-        
-        # Set optimal humidity
-        await device.set_target_humidity(TargetHumidityEnum.FIFTY_PERCENT)
-        
-        # Adjust fan speed
-        await device.change_fan_speed(40)
-```
-
-### Monitoring with Health Checks
-
-Continuous monitoring with health status and error detection.
-```python
-async def monitor_device():
-    async with PicoClient(ip="192.168.1.100", pin="1234", device_id="monitor") as device:
-        while True:
-            status = await device.get_status()
-            
-            health = "✅ Healthy" if status.is_healthy else "⚠️ Issues"
-            power = '🟢 ON' if status.is_on else '🔴 OFF'
-            night = '🌙 Active' if status.operating.is_night_mode_active else 'Inactive'
-            
-            print(f"\n📊 Device Status Report")
-            print(f"Health: {health} | Power: {power}")
-            print(f"Mode: {status.operating.mode.name}")
-            print(f"Temperature: {status.sensors.temperature_celsius}°C")
-            print(f"Humidity: {status.sensors.humidity_percent}%")
-            print(f"Fan Speed: {status.operating.speed}%")
-            print(f"Night Mode: {night}")
-            print(f"Uptime: {status.system.uptime_days:.1f} days")
-            
-            # Alert on errors
-            if status.parameters.has_errors:
-                print(f"⚠️ Errors: {status.parameters.active_errors}")
-            
-            await asyncio.sleep(30)
-```
-
-### Adaptive Climate Control
-
-Automatically adjust settings based on environmental conditions.
-```python
-async def adaptive_climate_control():
-    async with PicoClient(ip="192.168.1.100", pin="1234", device_id="adaptive") as device:
-        status = await device.get_status()
-        
-        # High humidity detected
-        if status.sensors.humidity_percent > 70:
-            print("High humidity - switching to extraction mode")
-            await device.change_operating_mode(DeviceModeEnum.HUMIDITY_EXTRACTION)
-            await device.change_fan_speed(80)
-        
-        # High CO2 levels
-        elif status.sensors.eco2 > 1000:
-            print("High CO2 - increasing ventilation")
-            await device.change_operating_mode(DeviceModeEnum.CO2_RECOVERY)
-            await device.change_fan_speed(70)
-        
-        # Normal conditions
-        else:
-            print("Normal conditions - comfort mode")
-            await device.change_operating_mode(DeviceModeEnum.HEAT_RECOVERY)
-            await device.change_fan_speed(50)
-```
-
-### Smart Home Integration
-
-Example integration with daily routines.
-```python
-async def smart_home_automation():
-    device = PicoClient(
-        ip="192.168.1.100",
-        pin="1234",
-        device_id="automation"
-    )
-    
-    async with device:
-        # Morning routine
-        print("☀️ Morning routine activated")
-        await device.turn_on()
-        await device.change_operating_mode(DeviceModeEnum.COMFORT_WINTER)
-        await device.change_fan_speed(60)
-        await device.set_led_status(True)
-        
-        # Wait for evening
-        await asyncio.sleep(3600 * 8)
-        
-        # Evening routine
-        print("🌙 Evening routine activated")
-        await device.set_night_mode(True)
-        await device.change_fan_speed(30)
-        await device.set_led_status(False)
-```
+Ready-to-run example scripts are available in the [`examples/`](examples/) directory.
+See [`examples/README.md`](examples/README.md) for full documentation and usage instructions.
 
 ---
 
@@ -856,31 +685,39 @@ async def smart_home_automation():
 ## 📦 Library Structure
 ```
 open-pico-local-api/
-├── pico_client.py                     # Main client class
-├── pico_auto_discovery.py             # Subnet-based device discovery
-├── shared_transport_manager.py        # Shared UDP transport for multi-device
-├── run_tests.sh                       # Local test runner script
-├── enums/
-│   ├── device_mode_enum.py           # Operating modes
-│   ├── on_off_state_enum.py          # Power states
-│   └── target_humidity_enum.py       # Humidity levels
-├── models/
-│   ├── pico_device_model.py          # Complete device state
-│   ├── command_response_model.py     # Command responses
-│   ├── device_info_model.py          # Device identification
-│   ├── sensor_readings_model.py      # Sensor data
-│   ├── operating_parameters_model.py # Operating state
-│   ├── parameter_arrays_model.py     # Parameter arrays
-│   └── system_info_model.py          # System diagnostics
-├── utils/
-│   ├── auto_reconnect.py             # Auto-reconnect decorator
-│   ├── constants.py                  # Mode constants
-│   └── pico_protocol.py             # Base UDP protocol
-├── exceptions/
-│   ├── pico_connection_error.py
-│   ├── pico_timeout_error.py
-│   ├── not_supported_error.py
-│   └── pico_device_error.py
+├── examples/
+│   ├── basic_control.py               # Connect, read status, control a single device
+│   ├── multi_device.py                # Concurrent control of multiple devices
+│   ├── auto_discovery.py              # Discover devices then read their status
+│   ├── adaptive_climate.py            # Auto-select mode from sensor readings
+│   ├── monitoring.py                  # Continuous polling with alerts
+│   └── maintenance.py                 # Check and reset filter maintenance flag
+├── open_pico_local_api/
+│   ├── __init__.py                    # Public API re-exports
+│   ├── pico_client.py                 # Main client class
+│   ├── pico_auto_discovery.py         # Subnet-based device discovery
+│   ├── shared_transport_manager.py    # Shared UDP transport for multi-device
+│   ├── enums/
+│   │   ├── device_mode_enum.py        # Operating modes
+│   │   ├── on_off_state_enum.py       # Power states
+│   │   └── target_humidity_enum.py    # Humidity levels
+│   ├── models/
+│   │   ├── pico_device_model.py       # Complete device state
+│   │   ├── command_response_model.py  # Command responses
+│   │   ├── device_info_model.py       # Device identification
+│   │   ├── sensor_readings_model.py   # Sensor data
+│   │   ├── operating_parameters_model.py
+│   │   ├── parameter_arrays_model.py
+│   │   └── system_info_model.py       # System diagnostics
+│   ├── utils/
+│   │   ├── auto_reconnect.py          # Auto-reconnect decorator
+│   │   ├── constants.py               # Mode constants
+│   │   └── pico_protocol.py           # Base UDP protocol
+│   └── exceptions/
+│       ├── pico_device_error.py
+│       ├── pico_connection_error.py
+│       ├── pico_timeout_error.py
+│       └── not_supported_error.py
 └── tests/
     ├── test_exceptions.py
     ├── test_enums.py
