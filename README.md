@@ -265,6 +265,8 @@ asyncio.run(main())
 
 **Returns:** sorted `List[str]` of discovered IP addresses.
 
+> ⚠️ **Note:** A single PIN is broadcast to every host in the subnet. Only devices that share that PIN will respond. Devices with a different PIN will be silently missed.
+
 ### Discovery + Connect
 
 ```python
