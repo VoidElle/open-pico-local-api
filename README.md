@@ -4,10 +4,10 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.1-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
+[![Version](https://img.shields.io/badge/version-2.3.0-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
 [![Tests](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml/badge.svg)](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml)
 
-**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Testing](#-testing)**
+**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Scripts](#️-scripts) • [Testing](#-testing)**
 
 ---
 
@@ -46,7 +46,7 @@
 Install directly from a GitHub tag — no need to copy source files:
 
 ```bash
-pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.1"
+pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.0"
 ```
 
 ### Home Assistant integration
@@ -55,7 +55,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.1"
+  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.0"
 ]
 ```
 
@@ -157,6 +157,7 @@ if __name__ == "__main__":
 - [Data Models](#️-data-models)
 - [Exception Handling](#-exception-handling)
 - [Examples](#-examples)
+- [Scripts](#️-scripts)
 - [Testing](#-testing)
 - [Best Practices](#-best-practices)
 
@@ -685,6 +686,9 @@ See [`examples/README.md`](examples/README.md) for full documentation and usage 
 ## 📦 Library Structure
 ```
 open-pico-local-api/
+├── scripts/
+│   ├── bump_version.sh                # Bump version across all files
+│   └── run_tests.sh                   # Run the full test suite
 ├── examples/
 │   ├── basic_control.py               # Connect, read status, control a single device
 │   ├── multi_device.py                # Concurrent control of multiple devices
@@ -730,6 +734,32 @@ open-pico-local-api/
 
 ---
 
+## 🛠️ Scripts
+
+Utility scripts live in the [`scripts/`](scripts/) directory and must be run from the repo root.
+
+### `scripts/bump_version.sh`
+
+Keeps all version references in sync across `pyproject.toml`, `README.md`, and `pico_client.py` in one command.
+
+```bash
+./scripts/bump_version.sh patch     # 2.3.0 → 2.3.1
+./scripts/bump_version.sh minor     # 2.3.0 → 2.4.0
+./scripts/bump_version.sh major     # 2.3.0 → 3.0.0
+./scripts/bump_version.sh 2.5.0     # set an explicit version
+./scripts/bump_version.sh           # interactive menu
+```
+
+### `scripts/run_tests.sh`
+
+Runs the full unit test suite with verbose output.
+
+```bash
+./scripts/run_tests.sh
+```
+
+---
+
 ## 📋 Requirements
 
 - **Python 3.11+**
@@ -746,7 +776,7 @@ The library ships with a full unit test suite (96 tests) covering all modules. N
 ### Run locally
 
 ```bash
-./run_tests.sh
+./scripts/run_tests.sh
 ```
 
 Or directly:

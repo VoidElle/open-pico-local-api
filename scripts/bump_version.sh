@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+cd "$(dirname "$0")/.."
+
 PYPROJECT="pyproject.toml"
 README="README.md"
 PICO_CLIENT="open_pico_local_api/pico_client.py"
