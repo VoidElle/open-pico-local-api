@@ -20,7 +20,7 @@ from open_pico_local_api.shared_transport_manager import SharedTransportManager
 from open_pico_local_api.utils.constants import HUMIDITY_SELECTOR_PRESET_MODES, MODULAR_FAN_SPEED_PRESET_MODES
 
 _LOGGER = logging.getLogger(__name__)
-__version__ = "2.3.0"
+__version__ = "2.3.1"
 
 class PicoClient:
     """

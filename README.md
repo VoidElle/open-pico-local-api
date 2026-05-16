@@ -4,7 +4,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.0-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
+[![Version](https://img.shields.io/badge/version-2.3.1-orange.svg)](https://github.com/VoidElle/open-pico-local-api)
 [![Tests](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml/badge.svg)](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml)
 
 **[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Testing](#-testing)**
@@ -46,7 +46,7 @@
 Install directly from a GitHub tag — no need to copy source files:
 
 ```bash
-pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.0"
+pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.1"
 ```
 
 ### Home Assistant integration
@@ -55,7 +55,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.0"
+  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.3.1"
 ]
 ```
 
@@ -71,8 +71,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 ### Single Device
 ```python
 import asyncio
-from open_pico_local_api.pico_client import PicoClient
-from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api import PicoClient, DeviceModeEnum
 
 async def main():
     # Initialize device with shared transport (default)
@@ -100,7 +99,7 @@ if __name__ == "__main__":
 ### Multiple Devices
 ```python
 import asyncio
-from open_pico_local_api.pico_client import PicoClient
+from open_pico_local_api import PicoClient
 
 async def main():
     # Create multiple device clients
@@ -243,7 +242,7 @@ device3 = PicoClient(ip="192.168.1.102", pin="1234")  # ID: "192.168.1.102:40070
 
 ```python
 import asyncio
-from open_pico_local_api.pico_auto_discovery import PicoAutoDiscovery
+from open_pico_local_api import PicoAutoDiscovery
 
 async def main():
     ips = await PicoAutoDiscovery.discover(pin="1234", subnet="192.168.1.0/24")
@@ -372,7 +371,7 @@ await device.turn_off()
 
 Change the device operating mode.
 ```python
-from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
+from open_pico_local_api import DeviceModeEnum
 
 await device.change_operating_mode(DeviceModeEnum.CO2_RECOVERY)
 ```
@@ -445,7 +444,7 @@ await device.set_led_status(True)
 
 Set target humidity level.
 ```python
-from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
+from open_pico_local_api import TargetHumidityEnum
 
 await device.set_target_humidity(TargetHumidityEnum.FIFTY_PERCENT)
 
@@ -629,8 +628,7 @@ The library provides custom exceptions for different scenarios:
 
 **Example:**
 ```python
-from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
-from open_pico_local_api.exceptions.not_supported_error import NotSupportedError
+from open_pico_local_api import PicoConnectionError, NotSupportedError
 
 async def safe_operation():
     device = PicoClient(ip="192.168.1.100", pin="1234")
