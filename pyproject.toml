@@ -10,6 +10,12 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
 keywords = ["pico", "hvac", "iot", "asyncio", "home-assistant"]
+
+[project.urls]
+Homepage = "https://github.com/VoidElle/open-pico-local-api"
+Source = "https://github.com/VoidElle/open-pico-local-api"
+"Bug Tracker" = "https://github.com/VoidElle/open-pico-local-api/issues"
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
