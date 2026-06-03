@@ -74,9 +74,9 @@ echo "Bumping version: $CURRENT → $NEW"
 sed -i '' "s/^version = \"${CURRENT}\"/version = \"${NEW}\"/" "$PYPROJECT"
 echo "  pyproject.toml  $CURRENT → $NEW"
 
-# --- update README.md git install URLs (@vX.Y.Z) ---
-sed -i '' "s|@v${CURRENT}|@v${NEW}|g" "$README"
-echo "  README.md URLs   $CURRENT → $NEW"
+# --- update README.md PyPI version pins (==X.Y.Z) ---
+sed -i '' "s|==${CURRENT}|==${NEW}|g" "$README"
+echo "  README.md HA   $CURRENT → $NEW"
 
 # --- update pico_client.py __version__ ---
 sed -i '' "s/__version__ = \"${CURRENT}\"/__version__ = \"${NEW}\"/" "$PICO_CLIENT"

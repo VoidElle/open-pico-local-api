@@ -43,10 +43,8 @@
 
 ### pip (recommended)
 
-Install directly from a GitHub tag — no need to copy source files:
-
 ```bash
-pip install "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.4.1"
+pip install open-pico-local-api
 ```
 
 ### Home Assistant integration
@@ -55,7 +53,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api @ git+https://github.com/VoidElle/open-pico-local-api.git@v2.4.1"
+  "open-pico-local-api==2.4.1"
 ]
 ```
 
