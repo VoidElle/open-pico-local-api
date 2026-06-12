@@ -28,11 +28,7 @@ class TestPicoProtocol(unittest.IsolatedAsyncioTestCase):
         proto, q = self._make_protocol()
         payload = json.dumps({"cmd": "stato_sync", "res": 1}).encode()
 
-        # Need a running loop for create_task
         proto.datagram_received(payload, ("10.0.0.1", 40070))
-
-        # Drain pending tasks
-        await asyncio.sleep(0)
 
         self.assertFalse(q.empty())
         response, addr = q.get_nowait()

@@ -73,13 +73,13 @@ class TestCommandResponseModel(unittest.TestCase):
         data = {"idp": 7, "frm": "pico", "cmd": "stato_sync"}
         model = CommandResponseModel.from_dict(data)
         self.assertEqual(model.idp, 7)
-        self.assertEqual(model.firmware, "pico")
+        self.assertEqual(model.frame_from, "pico")
         self.assertEqual(model.command, "stato_sync")
 
     def test_from_dict_defaults(self):
         model = CommandResponseModel.from_dict({})
         self.assertEqual(model.idp, 0)
-        self.assertEqual(model.firmware, "")
+        self.assertEqual(model.frame_from, "")
         self.assertEqual(model.command, "")
 
 

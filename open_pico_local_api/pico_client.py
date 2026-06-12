@@ -5,7 +5,7 @@ Modified PicoClient that uses shared transport for multiple devices
 import logging
 import asyncio
 import json
-import time
+import random
 from typing import Optional, Dict, Any, Union
 
 from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
@@ -20,7 +20,7 @@ from open_pico_local_api.shared_transport_manager import SharedTransportManager
 from open_pico_local_api.utils.constants import HUMIDITY_SELECTOR_PRESET_MODES, MODULAR_FAN_SPEED_PRESET_MODES
 
 _LOGGER = logging.getLogger(__name__)
-__version__ = "2.4.1"
+__version__ = "2.5.1"
 
 class PicoClient:
     """
@@ -41,7 +41,7 @@ class PicoClient:
             retry_attempts: int = 3,
             retry_delay: float = 2.0,
             verbose: bool = False,
-            use_shared_transport: bool = True
+            poll_jitter: float = 0.0,
     ):
         self.ip = ip
         self.pin = pin
@@ -51,7 +51,7 @@ class PicoClient:
         self.retry_attempts = retry_attempts
         self.retry_delay = retry_delay
         self.verbose = verbose
-        self.use_shared_transport = use_shared_transport
+        self.poll_jitter = poll_jitter
 
         # Generate device_id if not provided
         self.device_id = device_id or f"{ip}:{device_port}"
@@ -96,58 +96,50 @@ class PicoClient:
             _LOGGER.debug(f"✓ [{self.device_id}] IDP counter manually reset")
 
     async def connect(self) -> None:
-        """
-        Connect to the Pico device
-
-        If you use_shared_transport is True, registers with SharedTransportManager.
-        Otherwise, creates a dedicated socket (legacy mode).
-        """
+        """Connect to the Pico device via the shared UDP transport."""
         if self._connected:
             return
 
         try:
-            if self.use_shared_transport:
-                # Get shared transport manager
-                self._transport_manager = await SharedTransportManager.get_instance()
+            self._transport_manager = await SharedTransportManager.get_instance()
 
-                # Initialize if needed
-                if not self._transport_manager.is_initialized:
-                    await self._transport_manager.initialize(
-                        local_port=self.local_port,
-                        verbose=self.verbose
-                    )
-
-                # Register this device
-                self._idp_range_start, self._idp_range_size = await self._transport_manager.register_device(
-                    device_id=self.device_id,
-                    ip=self.ip,
-                    port=self.device_port,
-                    response_queue=self._response_queue,
-                    event_callbacks=self._event_callbacks
+            if not self._transport_manager.is_initialized:
+                await self._transport_manager.initialize(
+                    local_port=self.local_port,
+                    verbose=self.verbose
                 )
 
-                # Reset IDP counter to start of range
-                self._idp_counter = self._idp_range_start
+            self._idp_range_start, self._idp_range_size = await self._transport_manager.register_device(
+                device_id=self.device_id,
+                ip=self.ip,
+                port=self.device_port,
+                response_queue=self._response_queue,
+                event_callbacks=self._event_callbacks
+            )
 
-                if self.verbose:
-                    _LOGGER.debug(f"✓ Connected '{self.device_id}' to {self.ip}:{self.device_port} (shared transport)")
-                    _LOGGER.debug(f"  IDP range: {self._idp_range_start} - {self._idp_range_start + self._idp_range_size - 1}")
+            self._idp_counter = self._idp_range_start
 
-            else:
-                # Legacy mode: dedicated socket (not recommended for multiple devices)
-                raise NotImplementedError("Legacy mode not implemented in this version. Use shared transport.")
+            if self.verbose:
+                _LOGGER.debug(f"✓ Connected '{self.device_id}' to {self.ip}:{self.device_port} (shared transport)")
+                _LOGGER.debug(f"  IDP range: {self._idp_range_start} - {self._idp_range_start + self._idp_range_size - 1}")
 
             self._connected = True
 
         except Exception as e:
             raise PicoConnectionError(f"Failed to connect: {e}")
 
+        # Spread concurrent polls across multiple devices to avoid thundering herd.
+        # Set poll_jitter > 0 when managing many devices in parallel (e.g. Home Assistant).
+        # Kept outside the try/except so CancelledError is not swallowed.
+        if self.poll_jitter > 0:
+            await asyncio.sleep(random.uniform(0, self.poll_jitter))
+
     async def disconnect(self) -> None:
         """Disconnect from the Pico"""
         if not self._connected:
             return
 
-        if self.use_shared_transport and self._transport_manager:
+        if self._transport_manager:
             await self._transport_manager.unregister_device(self.device_id)
 
         self._connected = False
@@ -363,11 +355,7 @@ class PicoClient:
         """Send a raw UDP packet to the device"""
         try:
             data = json.dumps(cmd).encode('utf-8')
-
-            if self.use_shared_transport:
-                await self._transport_manager.send_to_device(self.device_id, data)
-            else:
-                raise NotImplementedError("Legacy mode not supported")
+            await self._transport_manager.send_to_device(self.device_id, data)
 
             if self.verbose:
                 cmd_name = cmd.get('cmd', 'ACK' if cmd.get('res') == 99 else 'unknown')
@@ -405,8 +393,7 @@ class PicoClient:
                 if not await self._send_udp_packet(cmd):
                     continue
 
-                response_timeout = 2.0
-                response = await self._wait_for_response(idp, response_timeout)
+                response = await self._wait_for_response(idp, self.timeout)
 
                 if response:
                     if idp_sync_attempt > 0 and self.verbose:
@@ -427,18 +414,19 @@ class PicoClient:
 
     async def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
         """Wait for responses matching the given idp"""
+        loop = asyncio.get_running_loop()
         got_ack = False
-        end_time = time.time() + timeout
+        end_time = loop.time() + timeout
         ack_timeout = 2.0
         ack_received_time: Optional[float] = None
 
-        while time.time() < end_time:
-            remaining = end_time - time.time()
+        while loop.time() < end_time:
+            remaining = end_time - loop.time()
             if remaining <= 0:
                 break
 
             if got_ack and ack_received_time is not None:
-                if time.time() - ack_received_time > ack_timeout:
+                if loop.time() - ack_received_time > ack_timeout:
                     if self.verbose:
                         _LOGGER.debug(f"  ⚠ [{self.device_id}] ACK received but no status - IDP may be out of sync")
                     return None
@@ -456,7 +444,7 @@ class PicoClient:
                     if self.verbose:
                         _LOGGER.debug(f"  ✓ [{self.device_id}] ACK received (idp:{idp})")
                     got_ack = True
-                    ack_received_time = time.time()
+                    ack_received_time = loop.time()
 
                 elif response.get("res") != 99:
                     if self.verbose:

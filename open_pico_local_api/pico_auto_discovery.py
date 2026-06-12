@@ -119,9 +119,10 @@ class PicoAutoDiscovery:
         verbose: bool,
     ) -> None:
         """Drain *unmatched_queue* for *duration* seconds, collecting valid Pico IPs."""
-        end_time = asyncio.get_event_loop().time() + duration
+        loop = asyncio.get_running_loop()
+        end_time = loop.time() + duration
         while True:
-            remaining = end_time - asyncio.get_event_loop().time()
+            remaining = end_time - loop.time()
             if remaining <= 0:
                 break
             try:
@@ -163,7 +164,15 @@ class PicoAutoDiscovery:
             async with semaphore:
                 manager.send_raw(probe, (ip_str, device_port))
 
-        # Fire all probes, then collect responses once
-        await asyncio.gather(*[probe_host(str(ip)) for ip in hosts])
-        await PicoAutoDiscovery._collect_responses(unmatched_queue, discovered, timeout, verbose)
+        # Start collection concurrently with probing so responses from fast-responding
+        # devices are captured even before all probes have been sent.
+        collect_task = asyncio.create_task(
+            PicoAutoDiscovery._collect_responses(unmatched_queue, discovered, timeout, verbose)
+        )
+        try:
+            await asyncio.gather(*[probe_host(str(ip)) for ip in hosts])
+            await collect_task
+        except BaseException:
+            collect_task.cancel()
+            raise
 

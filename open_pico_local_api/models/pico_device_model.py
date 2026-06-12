@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 from typing import Dict, Any
 
 from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
@@ -10,6 +11,8 @@ from open_pico_local_api.models.parameter_arrays_model import ParameterArraysMod
 from open_pico_local_api.models.sensor_readings_model import SensorReadingsModel
 from open_pico_local_api.models.system_info_model import SystemInfoModel
 from open_pico_local_api.utils.constants import MODULAR_FAN_SPEED_PRESET_MODES, HUMIDITY_SELECTOR_PRESET_MODES
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -68,6 +71,24 @@ class PicoDeviceModel:
             maintenance=data.get("man", [])
         )
 
+        try:
+            mode = DeviceModeEnum(data.get("mod", 1))
+        except ValueError:
+            _LOGGER.warning(f"Unknown device mode value: {data.get('mod')} — defaulting to HEAT_RECOVERY")
+            mode = DeviceModeEnum.HEAT_RECOVERY
+
+        try:
+            on_off = OnOffStateEnum(data.get("on_off", 0))
+        except ValueError:
+            _LOGGER.warning(f"Unknown on_off value: {data.get('on_off')} — defaulting to OFF")
+            on_off = OnOffStateEnum.OFF
+
+        try:
+            humidity_setpoint = TargetHumidityEnum(data.get("s_umd", 0))
+        except ValueError:
+            _LOGGER.warning(f"Unknown humidity setpoint value: {data.get('s_umd')} — defaulting to FIFTY_PERCENT")
+            humidity_setpoint = TargetHumidityEnum.FIFTY_PERCENT
+
         sensors = SensorReadingsModel(
             temperature=float(data.get("v_tmpr", 0.0)),
             humidity=float(data.get("v_umd", 0.0)),
@@ -75,7 +96,7 @@ class PicoDeviceModel:
             tvoc=data.get("v_Tvoc", 0),
             eco2=data.get("v_ECo2", 0),
             humidity_raw=data.get("umd_raw", 0),
-            humidity_setpoint=TargetHumidityEnum(data.get("s_umd", 0)),
+            humidity_setpoint=humidity_setpoint,
             co2_setpoint=data.get("s_co2", 0)
         )
 
@@ -89,9 +110,9 @@ class PicoDeviceModel:
         )
 
         operating = OperatingParametersModel(
-            mode=DeviceModeEnum(data.get("mod", 1)),
+            mode=mode,
             step_mode=data.get("step_mod", 0),
-            on_off=OnOffStateEnum(data.get("on_off", 0)),
+            on_off=on_off,
             speed=data.get("speed", 0),
             speed_requested=data.get("spd_rich", 0),
             speed_row=data.get("spd_row", 0),

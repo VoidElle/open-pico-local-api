@@ -22,8 +22,8 @@ class PicoProtocol(asyncio.DatagramProtocol):
             if self.verbose:
                 print(f"← RECV: {response.get('res', response.get('cmd', 'unknown'))}")
 
-            # Put response in queue (async-safe)
-            asyncio.create_task(self.response_queue.put((response, addr)))
+            # Put response in queue immediately (sync-safe)
+            self.response_queue.put_nowait((response, addr))
 
             # Trigger event callbacks
             cmd = response.get('cmd', '')

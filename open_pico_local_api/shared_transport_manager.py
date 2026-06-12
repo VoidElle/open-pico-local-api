@@ -5,11 +5,12 @@ Allows multiple PicoClient instances to share a single UDP socket by routing
 responses based on IDP ranges assigned to each device.
 """
 
+import bisect
 import logging
 import asyncio
 import inspect
 import json
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 from open_pico_local_api.exceptions.pico_connection_error import PicoConnectionError
@@ -49,7 +50,7 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
             if self.verbose:
                 idp = response.get('idp', '?')
                 cmd = response.get('cmd', 'unknown')
-                print(f"← RECV from {addr}: cmd={cmd}, idp={idp}")
+                _LOGGER.debug(f"← RECV from {addr}: cmd={cmd}, idp={idp}")
 
             # Route response to correct device based on IDP
             idp = response.get('idp')
@@ -70,17 +71,17 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
                     if unmatched_queue is not None:
                         unmatched_queue.put_nowait((response, addr))
                     elif self.verbose:
-                        print(f"⚠ No device found for IDP {idp}")
+                        _LOGGER.debug(f"⚠ No device found for IDP {idp}")
             else:
                 if self.verbose:
-                    print(f"⚠ Response without IDP: {response}")
+                    _LOGGER.debug(f"⚠ Response without IDP: {response}")
 
         except json.JSONDecodeError as e:
             if self.verbose:
-                print(f"⚠ JSON decode error: {e}")
+                _LOGGER.warning(f"⚠ JSON decode error: {e}")
         except Exception as e:
             if self.verbose:
-                print(f"⚠ Error processing datagram: {e}")
+                _LOGGER.warning(f"⚠ Error processing datagram: {e}")
 
     @staticmethod
     async def _run_callback(callback, response):
@@ -91,15 +92,15 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
             else:
                 callback(response)
         except Exception as e:
-            print(f"⚠ Callback error: {e}")
+            _LOGGER.warning(f"⚠ Callback error: {e}")
 
     def error_received(self, exc):
         if self.verbose:
-            print(f"⚠ Protocol error: {exc}")
+            _LOGGER.warning(f"⚠ Protocol error: {exc}")
 
     def connection_lost(self, exc):
         if self.verbose and exc:
-            print(f"⚠ Connection lost: {exc}")
+            _LOGGER.warning(f"⚠ Connection lost: {exc}")
 
 
 class SharedTransportManager:
@@ -119,7 +120,7 @@ class SharedTransportManager:
     """
 
     _instance = None
-    _lock = None  # Will be created on first access
+    _lock: asyncio.Lock = asyncio.Lock()  # Class-level lock — safe in Python 3.11+ (no event-loop binding)
 
     def __init__(self):
         if SharedTransportManager._instance is not None:
@@ -133,16 +134,16 @@ class SharedTransportManager:
         self._initialized = False
         self._next_idp_range = 1  # Start IDP allocation from 1
         self._idp_range_size = 10000  # Allocate 10k IDPs per device
-        self._init_lock = asyncio.Lock()  # Lock for thread-safe initialization
+        self._init_lock = asyncio.Lock()  # Lock for thread-safe initialization and registration
         self._unmatched_queue: Optional[asyncio.Queue] = None  # Receives packets with no registered IDP owner
+
+        # O(log n) IDP routing structures
+        self._idp_sorted_starts: List[int] = []          # Sorted range-start values
+        self._idp_start_to_device: Dict[int, str] = {}   # range_start → device_id
 
     @classmethod
     async def get_instance(cls):
         """Get or create singleton instance (thread-safe)"""
-        # Create class lock if needed (thread-safe)
-        if cls._lock is None:
-            cls._lock = asyncio.Lock()
-
         async with cls._lock:
             if cls._instance is None:
                 cls._instance = cls()
@@ -160,7 +161,7 @@ class SharedTransportManager:
         async with self._init_lock:
             if self._initialized:
                 if verbose:
-                    print(f"ℹ Shared transport already initialized on port {self._local_port}")
+                    _LOGGER.debug(f"ℹ Shared transport already initialized on port {self._local_port}")
                 return
 
             self._local_port = local_port
@@ -175,7 +176,7 @@ class SharedTransportManager:
                 self._initialized = True
 
                 if verbose:
-                    print(f"✓ Shared transport initialized on port {local_port}")
+                    _LOGGER.debug(f"✓ Shared transport initialized on port {local_port}")
 
             except Exception as e:
                 raise PicoConnectionError(f"Failed to initialize shared transport: {e}")
@@ -204,45 +205,62 @@ class SharedTransportManager:
         if not self._initialized:
             raise RuntimeError("Transport not initialized. Call initialize() first.")
 
-        if device_id in self._devices:
-            # Already registered, return existing range
-            reg = self._devices[device_id]
-            return reg.idp_range_start, reg.idp_range_size
+        async with self._init_lock:
+            if device_id in self._devices:
+                # Already registered, return existing range
+                reg = self._devices[device_id]
+                return reg.idp_range_start, reg.idp_range_size
 
-        # Allocate IDP range for this device
-        idp_range_start = self._next_idp_range
-        self._next_idp_range += self._idp_range_size
+            # Allocate IDP range for this device (protected by lock to prevent races)
+            idp_range_start = self._next_idp_range
+            self._next_idp_range += self._idp_range_size
 
-        registration = DeviceRegistration(
-            device_id=device_id,
-            ip=ip,
-            port=port,
-            response_queue=response_queue,
-            event_callbacks=event_callbacks or {},
-            idp_range_start=idp_range_start,
-            idp_range_size=self._idp_range_size
-        )
+            registration = DeviceRegistration(
+                device_id=device_id,
+                ip=ip,
+                port=port,
+                response_queue=response_queue,
+                event_callbacks=event_callbacks or {},
+                idp_range_start=idp_range_start,
+                idp_range_size=self._idp_range_size
+            )
 
-        self._devices[device_id] = registration
+            self._devices[device_id] = registration
+            bisect.insort(self._idp_sorted_starts, idp_range_start)
+            self._idp_start_to_device[idp_range_start] = device_id
 
         if self._verbose:
-            print(f"✓ Registered device '{device_id}' at {ip}:{port}")
-            print(f"  IDP range: {idp_range_start} - {idp_range_start + self._idp_range_size - 1}")
+            _LOGGER.debug(f"✓ Registered device '{device_id}' at {ip}:{port}")
+            _LOGGER.debug(f"  IDP range: {idp_range_start} - {idp_range_start + self._idp_range_size - 1}")
 
         return idp_range_start, self._idp_range_size
 
     async def unregister_device(self, device_id: str):
         """Unregister a device"""
         if device_id in self._devices:
-            del self._devices[device_id]
+            reg = self._devices.pop(device_id)
+            start = reg.idp_range_start
+            self._idp_start_to_device.pop(start, None)
+            idx = bisect.bisect_left(self._idp_sorted_starts, start)
+            if idx < len(self._idp_sorted_starts) and self._idp_sorted_starts[idx] == start:
+                self._idp_sorted_starts.pop(idx)
             if self._verbose:
-                print(f"✓ Unregistered device '{device_id}'")
+                _LOGGER.debug(f"✓ Unregistered device '{device_id}'")
 
     def find_device_by_idp(self, idp: int) -> Optional[str]:
-        """Find which device an IDP belongs to"""
-        for device_id, reg in self._devices.items():
-            if reg.idp_range_start <= idp < (reg.idp_range_start + reg.idp_range_size):
-                return device_id
+        """Find which device an IDP belongs to — O(log n) via bisect."""
+        if not self._idp_sorted_starts:
+            return None
+        idx = bisect.bisect_right(self._idp_sorted_starts, idp) - 1
+        if idx < 0:
+            return None
+        start = self._idp_sorted_starts[idx]
+        device_id = self._idp_start_to_device.get(start)
+        if device_id is None:
+            return None
+        reg = self._devices[device_id]
+        if idp < start + reg.idp_range_size:
+            return device_id
         return None
 
     async def send_to_device(self, device_id: str, data: bytes):
@@ -254,7 +272,7 @@ class SharedTransportManager:
         self._transport.sendto(data, (registration.ip, registration.port))
 
         if self._verbose:
-            print(f"→ SENT to {device_id} ({registration.ip}:{registration.port})")
+            _LOGGER.debug(f"→ SENT to {device_id} ({registration.ip}:{registration.port})")
 
     def send_raw(self, data: bytes, addr: Tuple[str, int]) -> None:
         """Send raw bytes to an arbitrary address (used by discovery)."""
@@ -285,9 +303,17 @@ class SharedTransportManager:
             self._transport.close()
             self._transport = None
             self._initialized = False
+            self._devices.clear()
+            self._idp_sorted_starts.clear()
+            self._idp_start_to_device.clear()
+            self._next_idp_range = 1
+            self._unmatched_queue = None
+
+            # Reset singleton so a fresh instance can be created after re-initialization
+            SharedTransportManager._instance = None
 
             if self._verbose:
-                print("✓ Shared transport closed")
+                _LOGGER.debug("✓ Shared transport closed")
 
     @property
     def is_initialized(self) -> bool:

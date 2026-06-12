@@ -13,7 +13,7 @@ class TestSharedTransportManagerUnit(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         # Reset singleton between tests
         SharedTransportManager._instance = None
-        SharedTransportManager._lock = None
+        SharedTransportManager._lock = asyncio.Lock()
 
     async def test_singleton_returns_same_instance(self):
         a = await SharedTransportManager.get_instance()
@@ -108,7 +108,7 @@ class TestSharedPicoProtocol(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         SharedTransportManager._instance = None
-        SharedTransportManager._lock = None
+        SharedTransportManager._lock = asyncio.Lock()
 
     def test_run_callback_is_static(self):
         self.assertTrue(isinstance(
@@ -138,8 +138,8 @@ class TestSharedPicoProtocol(unittest.IsolatedAsyncioTestCase):
         def bad_cb():
             raise ValueError("boom")
 
-        # Should not raise; suppress expected stderr/stdout from production error handler
-        with unittest.mock.patch("builtins.print"):
+        # Should not raise; warning is logged via _LOGGER (not print)
+        with unittest.mock.patch("open_pico_local_api.shared_transport_manager._LOGGER"):
             await SharedPicoProtocol._run_callback(bad_cb, {})
 
     async def test_datagram_received_routes_to_device_queue(self):

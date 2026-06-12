@@ -54,7 +54,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api==2.4.1"
+  "open-pico-local-api==2.5.1"
 ]
 ```
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 | `retry_attempts` | `int` | `3` | 🔄 Number of retry attempts |
 | `retry_delay` | `float` | `2.0` | ⏳ Delay between retries (seconds) |
 | `verbose` | `bool` | `False` | 📢 Enable verbose logging |
-| `use_shared_transport` | `bool` | `True` | 🔗 Use shared transport for multi-device support |
+| `poll_jitter` | `float` | `0.0` | 🕐 Max random delay after connect (seconds) to spread concurrent polls across devices |
 
 ---
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
 ### Usage
 
-Simply create multiple `PicoClient` instances with `use_shared_transport=True` (default):
+Simply create multiple `PicoClient` instances — shared transport is always active:
 ```python
 device1 = PicoClient(ip="192.168.1.100", pin="1234", device_id="device1")
 device2 = PicoClient(ip="192.168.1.101", pin="1234", device_id="device2")
@@ -259,7 +259,7 @@ asyncio.run(main())
 | **`subnet`** ⭐ | `str` | *required* | CIDR range to scan (e.g. `"192.168.1.0/24"`) |
 | `device_port` | `int` | `40070` | UDP port Pico devices listen on |
 | `local_port` | `int` | `40069` | Local port for `SharedTransportManager` |
-| `scan_timeout` | `float` | `2.0` | Seconds to collect replies after probes are sent |
+| `scan_timeout` | `float` | `2.0` | Seconds to collect replies (collection starts concurrently with probing) |
 | `max_concurrent` | `int` | `50` | Max simultaneous probes |
 | `verbose` | `bool` | `False` | Enable debug logging |
 
@@ -610,9 +610,9 @@ Response from device control commands.
 ```python
 response = await device.turn_on()
 
-print(f"Success: {response.success}")
-print(f"Message: {response.message}")
 print(f"IDP: {response.idp}")
+print(f"Frame from: {response.frame_from}")
+print(f"Command: {response.command}")
 ```
 
 ---

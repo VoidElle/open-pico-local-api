@@ -6,13 +6,13 @@ from typing import Any, Dict
 class CommandResponseModel:
     """Models that we receive in response to commands sent to the device"""
     idp: int
-    firmware: str
+    frame_from: str
     command: str
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'CommandResponseModel':
         return cls(
             idp=data.get("idp", 0),
-            firmware=data.get("frm", ""),
+            frame_from=data.get("frm", ""),
             command=data.get("cmd", ""),
         )
