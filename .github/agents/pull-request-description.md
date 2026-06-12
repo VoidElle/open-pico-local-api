@@ -1,4 +1,4 @@
-# Pull Request Description Agent — open-pico-local-api
+# Pull Request Description Agent - open-pico-local-api
 
 ## Purpose
 Generate clear, structured PR descriptions for this async Python UDP IoT library.
@@ -19,18 +19,18 @@ Scopes: `client`, `transport`, `models`, `enums`, `exceptions`, `utils`, `tests`
 [Brief explanation of the approach, especially for protocol or async changes]
 
 ## Testing
-[How the change was validated — manual test against device, unit test, etc.]
+[How the change was validated - manual test against device, unit test, etc.]
 
 ## Breaking Changes
 [List any breaking changes, or "None"]
 ```
 
 ## Domain Context
-- UDP IDP protocol: changes to IDP range logic or ACK handling are high-risk — call out explicitly
-- `SharedTransportManager` is a singleton — changes affect all concurrent device clients
+- UDP IDP protocol: changes to IDP range logic or ACK handling are high-risk - call out explicitly
+- `SharedTransportManager` is a singleton - changes affect all concurrent device clients
 - Mode guards (`get_status()` checks before commands) are safety-critical; flag if removed or weakened
-- `from_dict()` model changes may break downstream Home Assistant integrations — note field renames
+- `from_dict()` model changes may break downstream Home Assistant integrations - note field renames
 - Async context manager (`__aenter__`/`__aexit__`) changes must ensure `disconnect()` always runs
-- Exception class names: `PicoConnectionError`, `PicoTimeoutError`, `PicoDeviceError`, `NotSupportedError` — never use bare `ConnectionError`/`TimeoutError`
+- Exception class names: `PicoConnectionError`, `PicoTimeoutError`, `PicoDeviceError`, `NotSupportedError` - never use bare `ConnectionError`/`TimeoutError`
 - After any code change, all 96 tests must pass: `./run_tests.sh` or CI will catch it
-- IPv6 subnets are not supported in `PicoAutoDiscovery` — raises `ValueError` by design
+- IPv6 subnets are not supported in `PicoAutoDiscovery` - raises `ValueError` by design

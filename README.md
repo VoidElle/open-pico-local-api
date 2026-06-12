@@ -8,7 +8,7 @@
 [![PyPI](https://img.shields.io/pypi/v/open-pico-local-api)](https://pypi.org/project/open-pico-local-api/)
 [![Tests](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml/badge.svg)](https://github.com/VoidElle/open-pico-local-api/actions/workflows/tests.yml)
 
-**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Examples](#-examples) • [Scripts](#️-scripts) • [Testing](#-testing)**
+**[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Internals](#-internals) • [Examples](#-examples) • [Scripts](#️-scripts) • [Testing](#-testing)**
 
 ---
 
@@ -155,6 +155,7 @@ if __name__ == "__main__":
 - [IDP Management](#-idp-management)
 - [Data Models](#️-data-models)
 - [Exception Handling](#-exception-handling)
+- [Internals](#-internals)
 - [Examples](#-examples)
 - [Scripts](#️-scripts)
 - [Testing](#-testing)
@@ -202,7 +203,7 @@ if __name__ == "__main__":
 
 ### Usage
 
-Simply create multiple `PicoClient` instances — shared transport is always active:
+Simply create multiple `PicoClient` instances - shared transport is always active:
 ```python
 device1 = PicoClient(ip="192.168.1.100", pin="1234", device_id="device1")
 device2 = PicoClient(ip="192.168.1.101", pin="1234", device_id="device2")
@@ -236,7 +237,7 @@ device3 = PicoClient(ip="192.168.1.102", pin="1234")  # ID: "192.168.1.102:40070
 
 ## 🔍 Auto-Discovery
 
-`PicoAutoDiscovery` scans a subnet and returns the IPs of all Pico devices it finds. All traffic goes through `SharedTransportManager` (port 40069) — Pico devices are hardcoded to reply only to that port.
+`PicoAutoDiscovery` scans a subnet and returns the IPs of all Pico devices it finds. All traffic goes through `SharedTransportManager` (port 40069) - Pico devices are hardcoded to reply only to that port.
 
 ### Basic Usage
 
@@ -651,9 +652,21 @@ async def safe_operation():
 
 ---
 
-## 💡 Examples
+## 🔬 Internals
 
-Ready-to-run example scripts are available in the [`examples/`](examples/) directory.
+Detailed documentation of the internal flows and architecture lives in [`docs/`](docs/):
+
+| Document | Description |
+|----------|-------------|
+| [Architecture: Shared Transport](docs/architecture.md) | How the single UDP socket is shared across devices; IDP range allocation; O(log n) packet routing |
+| [Command Flow](docs/command-flow.md) | The 4-step send/ACK/status/ACK UDP exchange; `_wait_for_response` state machine; timeout behaviour |
+| [Retry Logic & IDP Sync](docs/retry-logic.md) | Two-level retry strategy; how IDP drift is detected and recovered; manual reset |
+| [Connection Lifecycle](docs/connection-lifecycle.md) | `connect()` / `disconnect()` flow; `auto_reconnect` decorator; `SharedTransportManager.shutdown()` |
+| [Auto-Discovery Flow](docs/auto-discovery.md) | Subnet probe; concurrent probe+collect; response validation; relation to registered devices |
+
+---
+
+## 💡 Examples
 See [`examples/README.md`](examples/README.md) for full documentation and usage instructions.
 
 ---
@@ -764,7 +777,7 @@ Runs the full unit test suite with verbose output.
 - **Python 3.11+**
 - **asyncio** support
 - **Local network access** to Pico device(s)
-- No third-party dependencies — stdlib only
+- No third-party dependencies - stdlib only
 
 ---
 

@@ -1,4 +1,4 @@
-# Debug Agent — open-pico-local-api
+# Debug Agent - open-pico-local-api
 
 ## Purpose
 Diagnose issues in the async UDP communication stack of this Pico device library.
@@ -31,7 +31,7 @@ Diagnose issues in the async UDP communication stack of this Pico device library
 **Fix:** Change operating mode first via `change_operating_mode()`; or pass `force=True` to bypass guard.
 
 ## Debugging Checklist
-1. Enable `verbose=True` on `PicoClient` — all IDP, ACK, and retry events log to `DEBUG`
+1. Enable `verbose=True` on `PicoClient` - all IDP, ACK, and retry events log to `DEBUG`
 2. Check `asyncio` event loop is running (not closed) when calling async methods
 3. Verify `await client.connect()` completed without raising before issuing commands
 4. For multi-device setups, confirm each device gets a distinct IDP range via `SharedTransportManager.register_device`
@@ -45,7 +45,7 @@ Diagnose issues in the async UDP communication stack of this Pico device library
 - Public accessors: use `get_device_registration(device_id)` and `unmatched_queue` property instead of accessing `_devices`/`_unmatched_queue` directly
 
 ## Exception Classes
-- `PicoDeviceError` — base class
-- `PicoConnectionError` — connection/communication failures
-- `PicoTimeoutError` — operation timeout
-- `NotSupportedError` — command not valid in current mode
+- `PicoDeviceError` - base class
+- `PicoConnectionError` - connection/communication failures
+- `PicoTimeoutError` - operation timeout
+- `NotSupportedError` - command not valid in current mode

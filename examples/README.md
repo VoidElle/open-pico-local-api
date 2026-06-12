@@ -1,7 +1,7 @@
 # 💡 Examples
 
 Ready-to-run scripts that demonstrate the main features of the `open-pico-local-api` library.
-Every script accepts CLI arguments — no code editing required.
+Every script accepts CLI arguments - no code editing required.
 
 ---
 
