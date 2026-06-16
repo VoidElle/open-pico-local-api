@@ -66,6 +66,7 @@ class PicoClient:
 
         self._response_queue = asyncio.Queue()
         self._lock = asyncio.Lock()
+        self._command_lock = asyncio.Lock()  # Serializes _execute_command_with_retry calls
         self._connected = False
         self._event_callbacks = {}
 
@@ -373,44 +374,58 @@ class PicoClient:
             cmd_dict: Dict[str, Any],
             retry: bool = True
     ) -> Optional[Dict[str, Any]]:
-        """Execute a command with IDP sync retry logic"""
-        max_attempts = self.retry_attempts if retry else 1
-        max_idp_sync = 5
+        """Execute a command with IDP sync retry logic.
 
-        for attempt in range(1, max_attempts + 1):
-            if attempt > 1:
-                if self.verbose:
-                    _LOGGER.debug(f"↻ [{self.device_id}] Retry {attempt}/{max_attempts}")
-                await asyncio.sleep(self.retry_delay)
+        Serialized via _command_lock to prevent concurrent callers (e.g. the
+        coordinator poll and a user-triggered command) from consuming each
+        other's responses off the shared _response_queue.
+        """
+        async with self._command_lock:
+            max_attempts = self.retry_attempts if retry else 1
+            max_idp_sync = 5
 
-            for idp_sync_attempt in range(max_idp_sync):
-                if idp_sync_attempt > 0 and self.verbose:
-                    _LOGGER.debug(f"  ↻ [{self.device_id}] IDP sync attempt {idp_sync_attempt}/{max_idp_sync}")
+            # Drain any stale responses left over from previous timed-out
+            # commands so they don't interfere with the new exchange.
+            while not self._response_queue.empty():
+                try:
+                    self._response_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
 
-                idp = await self._get_next_idp()
-                cmd = {**cmd_dict, "idp": idp}
+            for attempt in range(1, max_attempts + 1):
+                if attempt > 1:
+                    if self.verbose:
+                        _LOGGER.debug(f"↻ [{self.device_id}] Retry {attempt}/{max_attempts}")
+                    await asyncio.sleep(self.retry_delay)
 
-                if not await self._send_udp_packet(cmd):
-                    continue
-
-                response = await self._wait_for_response(idp, self.timeout)
-
-                if response:
+                for idp_sync_attempt in range(max_idp_sync):
                     if idp_sync_attempt > 0 and self.verbose:
-                        _LOGGER.debug(f"  ✓ [{self.device_id}] IDP synchronized after {idp_sync_attempt} increments")
-                    return response
+                        _LOGGER.debug(f"  ↻ [{self.device_id}] IDP sync attempt {idp_sync_attempt}/{max_idp_sync}")
 
-                # If no response after 3 seconds, IDP is likely out of sync
-                if self.verbose:
-                    _LOGGER.debug(f"  ⚠ [{self.device_id}] No response for IDP {idp} - likely out of sync")
+                    idp = await self._get_next_idp()
+                    cmd = {**cmd_dict, "idp": idp}
 
-            # After all IDP sync attempts failed, reset IDP counter
-            if attempt < max_attempts:
-                if self.verbose:
-                    _LOGGER.debug(f"  ⟲ [{self.device_id}] Resetting IDP counter to range start")
-                await self._reset_idp_counter()
+                    if not await self._send_udp_packet(cmd):
+                        continue
 
-        return None
+                    response = await self._wait_for_response(idp, self.timeout)
+
+                    if response:
+                        if idp_sync_attempt > 0 and self.verbose:
+                            _LOGGER.debug(f"  ✓ [{self.device_id}] IDP synchronized after {idp_sync_attempt} increments")
+                        return response
+
+                    # If no response after timeout, IDP is likely out of sync
+                    if self.verbose:
+                        _LOGGER.debug(f"  ⚠ [{self.device_id}] No response for IDP {idp} - likely out of sync")
+
+                # After all IDP sync attempts failed, reset IDP counter
+                if attempt < max_attempts:
+                    if self.verbose:
+                        _LOGGER.debug(f"  ⟲ [{self.device_id}] Resetting IDP counter to range start")
+                    await self._reset_idp_counter()
+
+            return None
 
     async def _wait_for_response(self, idp: int, timeout: float) -> Optional[Dict[str, Any]]:
         """Wait for responses matching the given idp"""
