@@ -7,6 +7,7 @@ turns it on, sets the operating mode, and disconnects.
 
 Usage:
     python3 basic_control.py --ip 192.168.1.100 --pin 1234
+    python3 basic_control.py --ip 192.168.1.100 --pin 1234 --verbose
 """
 
 import sys
@@ -15,21 +16,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import asyncio
 import argparse
+import logging
 
 from open_pico_local_api import PicoClient, DeviceModeEnum, PicoConnectionError, PicoTimeoutError
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Basic Pico device control.")
-    parser.add_argument("--ip",  required=True, help="Device IP address")
-    parser.add_argument("--pin", required=True, help="Device PIN")
+    parser.add_argument("--ip",      required=True,       help="Device IP address")
+    parser.add_argument("--pin",     required=True,       help="Device PIN")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose debug logging")
     return parser.parse_args()
 
 
 async def main() -> None:
     args = parse_args()
 
-    async with PicoClient(ip=args.ip, pin=args.pin, device_id="main") as device:
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
+
+    async with PicoClient(ip=args.ip, pin=args.pin, device_id="main", verbose=args.verbose) as device:
         print("Connected.")
 
         status = await device.get_status()

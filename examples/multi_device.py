@@ -8,6 +8,7 @@ a uniform mode across all of them.
 
 Usage:
     python3 multi_device.py --pin 1234 --ips 192.168.1.100 192.168.1.101 192.168.1.102
+    python3 multi_device.py --pin 1234 --ips 192.168.1.100 192.168.1.101 --verbose
 """
 
 import sys
@@ -16,22 +17,27 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import asyncio
 import argparse
+import logging
 
 from open_pico_local_api import PicoClient, DeviceModeEnum, PicoConnectionError, PicoTimeoutError
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Control multiple Pico devices concurrently.")
-    parser.add_argument("--pin", required=True, help="Shared device PIN")
-    parser.add_argument("--ips", required=True, nargs="+", help="Device IP addresses")
+    parser.add_argument("--pin",     required=True,        help="Shared device PIN")
+    parser.add_argument("--ips",     required=True, nargs="+", help="Device IP addresses")
+    parser.add_argument("--verbose", action="store_true",  help="Enable verbose debug logging")
     return parser.parse_args()
 
 
 async def main() -> None:
     args = parse_args()
 
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
+
     devices = [
-        PicoClient(ip=ip, pin=args.pin, device_id=f"device_{i}")
+        PicoClient(ip=ip, pin=args.pin, device_id=f"device_{i}", verbose=args.verbose)
         for i, ip in enumerate(args.ips)
     ]
 

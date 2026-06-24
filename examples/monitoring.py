@@ -8,6 +8,7 @@ Prints an alert if maintenance is required or errors are detected.
 Usage:
     python3 monitoring.py --ip 192.168.1.100 --pin 1234
     python3 monitoring.py --ip 192.168.1.100 --pin 1234 --interval 10
+    python3 monitoring.py --ip 192.168.1.100 --pin 1234 --verbose
 """
 
 import sys
@@ -16,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import asyncio
 import argparse
+import logging
 from datetime import datetime
 
 from open_pico_local_api import PicoClient, PicoConnectionError, PicoTimeoutError
@@ -26,15 +28,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ip",       required=True,        help="Device IP address")
     parser.add_argument("--pin",      required=True,        help="Device PIN")
     parser.add_argument("--interval", type=int, default=30, help="Polling interval in seconds (default: 30)")
+    parser.add_argument("--verbose",  action="store_true",  help="Enable verbose debug logging")
     return parser.parse_args()
 
 
 async def main() -> None:
     args = parse_args()
 
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
+
     print(f"Monitoring {args.ip} every {args.interval}s. Press Ctrl+C to stop.\n")
 
-    async with PicoClient(ip=args.ip, pin=args.pin) as device:
+    async with PicoClient(ip=args.ip, pin=args.pin, verbose=args.verbose) as device:
         while True:
             try:
                 status = await device.get_status()

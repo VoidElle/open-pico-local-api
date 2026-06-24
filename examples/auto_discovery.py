@@ -8,6 +8,7 @@ then connects to each discovered device and reads its status.
 Usage:
     python3 auto_discovery.py --subnet 192.168.1.0/24 --pin 1234
     python3 auto_discovery.py --subnet 192.168.1.0/24 --pin 1234 --timeout 5.0
+    python3 auto_discovery.py --subnet 192.168.1.0/24 --pin 1234 --verbose
 """
 
 import sys
@@ -16,26 +17,32 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import asyncio
 import argparse
+import logging
 
 from open_pico_local_api import PicoAutoDiscovery, PicoClient, PicoConnectionError
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Discover Pico devices then read their status.")
-    parser.add_argument("--subnet",  required=True, help="CIDR subnet to scan (e.g. 192.168.1.0/24)")
-    parser.add_argument("--pin",     required=True, help="Device PIN (all devices must share the same PIN)")
-    parser.add_argument("--timeout", type=float, default=2.0, help="Scan timeout in seconds (default: 2.0)")
+    parser.add_argument("--subnet",  required=True,                   help="CIDR subnet to scan (e.g. 192.168.1.0/24)")
+    parser.add_argument("--pin",     required=True,                   help="Device PIN (all devices must share the same PIN)")
+    parser.add_argument("--timeout", type=float,    default=2.0,      help="Scan timeout in seconds (default: 2.0)")
+    parser.add_argument("--verbose", action="store_true",             help="Enable verbose debug logging")
     return parser.parse_args()
 
 
 async def main() -> None:
     args = parse_args()
 
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s %(message)s")
+
     print(f"Scanning {args.subnet}…")
     ips = await PicoAutoDiscovery.discover(
         pin=args.pin,
         subnet=args.subnet,
         scan_timeout=args.timeout,
+        verbose=args.verbose,
     )
 
     if not ips:
@@ -46,7 +53,7 @@ async def main() -> None:
 
     for ip in ips:
         try:
-            async with PicoClient(ip=ip, pin=args.pin) as device:
+            async with PicoClient(ip=ip, pin=args.pin, verbose=args.verbose) as device:
                 status = await device.get_status()
                 print(f"[{ip}]")
                 print(f"  Power   : {'ON' if status.is_on else 'OFF'}")
