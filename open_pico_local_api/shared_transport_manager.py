@@ -207,8 +207,13 @@ class SharedTransportManager:
 
         async with self._init_lock:
             if device_id in self._devices:
-                # Already registered, return existing range
+                # Already registered — update the response queue and callbacks so that a
+                # reconnected client (new PicoClient instance, new asyncio.Queue) receives
+                # its responses instead of the old abandoned queue.
                 reg = self._devices[device_id]
+                reg.response_queue = response_queue
+                if event_callbacks:
+                    reg.event_callbacks = event_callbacks
                 return reg.idp_range_start, reg.idp_range_size
 
             # Allocate IDP range for this device (protected by lock to prevent races)
