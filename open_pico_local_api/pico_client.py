@@ -361,6 +361,7 @@ class PicoClient:
             if self.verbose:
                 cmd_name = cmd.get('cmd', 'ACK' if cmd.get('res') == 99 else 'unknown')
                 _LOGGER.debug(f"→ [{self.device_id}] SENT: {cmd_name} (idp:{cmd['idp']})")
+                _LOGGER.debug(f"  → [{self.device_id}] Raw command: {data.decode('utf-8')}")
 
             return True
 

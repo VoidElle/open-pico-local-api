@@ -51,6 +51,7 @@ class SharedPicoProtocol(asyncio.DatagramProtocol):
                 idp = response.get('idp', '?')
                 cmd = response.get('cmd', 'unknown')
                 _LOGGER.debug(f"← RECV from {addr}: cmd={cmd}, idp={idp}")
+                _LOGGER.debug(f"  ← RECV from {addr}: Raw response: {data.decode('utf-8')}")
 
             # Route response to correct device based on IDP
             idp = response.get('idp')

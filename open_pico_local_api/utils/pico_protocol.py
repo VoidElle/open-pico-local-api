@@ -21,6 +21,7 @@ class PicoProtocol(asyncio.DatagramProtocol):
             response = json.loads(data.decode('utf-8'))
             if self.verbose:
                 print(f"← RECV: {response.get('res', response.get('cmd', 'unknown'))}")
+                print(f"  ← RECV: Raw response: {data.decode('utf-8')}")
 
             # Put response in queue immediately (sync-safe)
             self.response_queue.put_nowait((response, addr))
