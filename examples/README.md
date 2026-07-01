@@ -101,6 +101,22 @@ python3 examples/maintenance.py --ip 192.168.1.100 --pin 1234 --force
 
 ---
 
+### [`idp_diagnostic.py`](idp_diagnostic.py)
+
+Diagnoses a device that stopped responding by brute-forcing its IDP. The normal retry logic only
+probes 5 consecutive IDP values; this sweeps a wider range to find the one the device answers to,
+then realigns the client counter so communication resumes.
+
+```bash
+# Sweep the full IDP range (slow - narrow it for speed)
+python3 examples/idp_diagnostic.py --ip 192.168.1.100 --pin 1234
+
+# Narrow the range and probe every hit
+python3 examples/idp_diagnostic.py --ip 192.168.1.100 --pin 1234 --start 1 --end 500 --all
+```
+
+---
+
 ## Common arguments
 
 | Argument | Used by | Description |
@@ -109,7 +125,9 @@ python3 examples/maintenance.py --ip 192.168.1.100 --pin 1234 --force
 | `--pin` | all | Device PIN |
 | `--subnet` | `auto_discovery` | CIDR range to scan (e.g. `192.168.1.0/24`) |
 | `--ips` | `multi_device` | Space-separated list of IP addresses |
-| `--timeout` | `auto_discovery` | Scan timeout in seconds (default: `2.0`) |
+| `--timeout` | `auto_discovery`, `idp_diagnostic` | Scan timeout / per-IDP wait in seconds |
 | `--interval` | `monitoring`, `adaptive_climate` | Polling/re-evaluation interval in seconds |
 | `--loop` | `adaptive_climate` | Keep running instead of running once |
 | `--force` | `maintenance` | Reset maintenance flag regardless of its state |
+| `--start` / `--end` | `idp_diagnostic` | IDP range to sweep |
+| `--all` | `idp_diagnostic` | Probe the whole range instead of stopping at first hit |

@@ -6,7 +6,7 @@ import logging
 import asyncio
 import json
 import random
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 
 from open_pico_local_api.enums.device_mode_enum import DeviceModeEnum
 from open_pico_local_api.enums.target_humidity_enum import TargetHumidityEnum
@@ -327,6 +327,115 @@ class PicoClient:
         if result is None:
             raise PicoTimeoutError("Command timed out")
         return CommandResponseModel.from_dict(result)
+
+    # ----------------------------
+    # DIAGNOSTICS
+    # ----------------------------
+
+    async def bruteforce_idp(
+            self,
+            start: Optional[int] = None,
+            end: Optional[int] = None,
+            per_idp_timeout: float = 0.3,
+            stop_on_first: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Diagnostic: sweep a range of IDP values to find which one the device responds to.
+
+        The normal retry/sync logic only probes 5 consecutive IDP values before giving up.
+        If a device's internal IDP counter has drifted far outside the client's expected
+        range (e.g. after many lost packets or an out-of-band restart), that logic cannot
+        recover it and every command silently times out. This method brute-forces the IDP
+        by sending a lightweight ``stato_sync`` command with each candidate IDP and waiting
+        a short time for a matching response.
+
+        On the first hit the client's IDP counter is realigned to the next value, so normal
+        commands work again afterwards.
+
+        Args:
+            start: First IDP to probe (inclusive). Defaults to the device's range start.
+            end: Last IDP to probe (inclusive). Defaults to the end of the device's
+                allocated range.
+            per_idp_timeout: Seconds to wait for a response per IDP. Keep this small - a
+                full sweep of a 10000-wide range at 0.3s each would take ~50 minutes, so
+                narrow the range for large sweeps.
+            stop_on_first: Stop at the first responsive IDP (default). Set to False to probe
+                the entire range and collect every hit.
+
+        Returns:
+            A dict with:
+              - ``found``: the first responsive IDP (or ``None`` if none responded)
+              - ``responsive_idps``: list of every IDP that responded
+              - ``probed``: number of IDPs actually probed
+        """
+        if not self._connected:
+            raise PicoConnectionError("Not connected to device")
+
+        if start is None:
+            start = self._idp_range_start
+        if end is None:
+            end = self._idp_range_start + self._idp_range_size - 1
+
+        if start > end:
+            raise ValueError(f"start ({start}) must be <= end ({end})")
+
+        cmd = {
+            "cmd": "stato_sync",
+            "frm": "app",
+            "pin": self.pin,
+        }
+
+        responsive: List[int] = []
+        probed = 0
+
+        async with self._command_lock:
+            if self.verbose:
+                _LOGGER.debug(f"🔎 [{self.device_id}] Bruteforcing IDP range {start}-{end} "
+                              f"({per_idp_timeout}s per IDP)")
+
+            for idp in range(start, end + 1):
+                # Drain stale responses from previous probes so they can't be
+                # mistaken for a hit on the current IDP.
+                while not self._response_queue.empty():
+                    try:
+                        self._response_queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+
+                probe = {**cmd, "idp": idp}
+                if not await self._send_udp_packet(probe):
+                    continue
+
+                probed += 1
+                response = await self._wait_for_response(idp, per_idp_timeout)
+
+                if response:
+                    responsive.append(idp)
+                    if self.verbose:
+                        _LOGGER.debug(f"✓ [{self.device_id}] Device responded to IDP {idp}")
+
+                    # Realign the counter so subsequent normal commands resume from here.
+                    async with self._lock:
+                        self._idp_counter = idp + 1
+                        if self._idp_counter >= (self._idp_range_start + self._idp_range_size):
+                            self._idp_counter = self._idp_range_start
+
+                    if stop_on_first:
+                        break
+
+        if self.verbose:
+            if responsive:
+                _LOGGER.debug(f"🔎 [{self.device_id}] Bruteforce done: responsive IDP(s) "
+                              f"{responsive} after probing {probed}")
+            else:
+                _LOGGER.debug(f"🔎 [{self.device_id}] Bruteforce done: no response after "
+                              f"probing {probed} IDP(s)")
+
+        return {
+            "found": responsive[0] if responsive else None,
+            "responsive_idps": responsive,
+            "probed": probed,
+        }
 
     # ----------------------------
     # INTERNAL METHODS

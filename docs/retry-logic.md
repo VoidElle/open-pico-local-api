@@ -97,3 +97,26 @@ await device.reset_idp()
 This resets `_idp_counter` to `_idp_range_start`. The next command will start from IDP 1
 (or whatever the range start is for this device), which is what a freshly booted device also
 starts at.
+
+## Bruteforce IDP Recovery (Diagnostic)
+
+`reset_idp()` and the automatic retry logic only help when the device's IDP is close to the
+client's expected value - the inner loop probes just 5 consecutive IDPs. If the device counter
+has drifted far away (many lost packets, an out-of-band restart, or an unknown starting point),
+none of that recovers it and every command silently times out.
+
+`bruteforce_idp()` sweeps a range of IDP values, sending a lightweight `stato_sync` with each
+one and waiting a short time for a matching response. On the first hit it realigns the client
+counter to the next value so normal commands resume:
+
+```python
+result = await device.bruteforce_idp(start=1, end=500, per_idp_timeout=0.3)
+if result["found"] is not None:
+    print(f"Device responded to IDP {result['found']}")
+    status = await device.get_status()  # works again
+```
+
+It returns `{"found": <idp or None>, "responsive_idps": [...], "probed": <count>}`.
+
+Keep the range narrow when possible: a full 10000-wide sweep at 0.3s per IDP takes ~50 minutes.
+See [`examples/idp_diagnostic.py`](../examples/idp_diagnostic.py) for a ready-to-run tool.
