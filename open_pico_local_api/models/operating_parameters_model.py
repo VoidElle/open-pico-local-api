@@ -11,8 +11,8 @@ class OperatingParametersModel:
     step_mode: int  # step_mod
     on_off: OnOffStateEnum  # on_off
     speed: int  # Current speed
-    speed_requested: int  # spd_rich
-    speed_row: int  # spd_row
+    speed_requested: int  # spd_rich: user setpoint 0..100 (what the app slider shows)
+    speed_row: int  # spd_row: instantaneous fan speed, dips on airflow reversal
     fan_direction: int  # fan_dir
     direction: int  # verso
 
