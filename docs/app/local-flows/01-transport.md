@@ -1,6 +1,6 @@
 # Local transport and protocol (PICO)
 
-Analysis of the JADX decompilation of the Tecnosystemi app (`Export-Pico/sources/it/tecnosystemi/TS/`). All paths are relative to that directory. Marking: no tag = read in the code; "(inferred)" = deduced. The decompiled output of some methods is degraded by JADX (flagged where relevant).
+Analysis of the JADX decompilation of the Tecnosystemi app (`../../../Export-Pico/sources/it/tecnosystemi/TS`). All paths are relative to that directory. Marking: no tag = read in the code; "(inferred)" = deduced. The decompiled output of some methods is degraded by JADX (flagged where relevant).
 
 Scope: PICO only. Out of scope (present in the app, not analyzed here): legacy CU over TCP (`MySocket`, `10.0.0.1:1235`), legacy CU bootloader (`MySocketBootLoader`), UDP 5678 discovery (`ThreadUDPServer`, never started), POLARIS network helper (`Functions.netBinding`), HTTP cloud (`ThreadWebService`).
 
@@ -442,5 +442,5 @@ Network:
 ## 12. Open questions
 
 - Full list of `res` values beyond 1/99: not in the transport layer, check in 02.
-- No app-side idp-sync: `resetIDP()` resets to 1 on every (re)connection; does the firmware tolerate it or require monotonicity? Compare with `docs/retry-logic.md` (on the Python side IDP drift blocks commands).
+- No app-side idp-sync: `resetIDP()` resets to 1 on every (re)connection; does the firmware tolerate it or require monotonicity? Compare with `../../retry-logic.md` (on the Python side IDP drift blocks commands).
 - Actual behavior of `Functions.getIPAddress(true)` when multiple interfaces are active (cellular + Wi-Fi) in the presence of `bindProcessToNetwork`.

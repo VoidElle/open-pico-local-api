@@ -1,8 +1,8 @@
 # PICO online (cloud) flows (decompiled Tecnosystemi app)
 
-Map of the cloud flows derived from `Export-Pico/sources/it/tecnosystemi/TS` (JADX).
+Map of the cloud flows derived from `../../../Export-Pico/sources/it/tecnosystemi/TS` (JADX).
 `file:line` references are relative to that folder. "(inferred)" = deduced, not read.
-Counterpart of [../app-flows](../app-flows/README.md) (local UDP flow).
+Counterpart of [../app-flows](../app/offline-flows/README.md) (local UDP flow).
 Out of scope: VMC, SeiX, legacy ControlUnit, master/slave cascade (`PicoCascataActivity`).
 
 | File | Content |

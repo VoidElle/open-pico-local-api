@@ -31,7 +31,7 @@ Reply `ResCode 0` -> `savserverPico()` saves the Pico with `offline=false`, adds
 Binding user<->device happens server side; PIN is verified by the backend (inferred from `ResCode 2`).
 
 ## Pair a new PICO online
-Local part (join `Pico_config` AP, `config` online, ...) is in [../app-flows/03-provisioning.md](../app-flows/03-provisioning.md). The cloud part (`ConfigPICOActivity`):
+Local part (join `Pico_config` AP, `config` online, ...) is in [../app-flows/03-provisioning.md](../local-flows/03-provisioning.md). The cloud part (`ConfigPICOActivity`):
 1. After the device accepts `config` online, app `unbidNetwork()` (drops AP binding) and sets `times = CONFIG_TIMES = 40` (`:61`, `:298`).
 2. `checkPicoOnline()` waits 5 s, then `POST /api/v1/AddUserToDevice` (type 29) with `Device_OP` + `PhoneDate` (`yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`, local time, literal `Z`).
 3. `ResCode 0` -> `addpico(serial, offline=false)`: cache Pico, add to plant, "device added". Anything else (network error, `ResCode != 0`) -> `times--` and repeat.

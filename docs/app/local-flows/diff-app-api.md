@@ -1,6 +1,6 @@
 # Report: disallineamenti app Tecnosystemi (PICO) vs `open_pico_local_api`
 
-Data: 2026-10-26. Confronto tra `docs/app-flows/*.md` (flussi ricavati dall'app decompilata) e implementazione (`../../open_pico_local_api`, `examples/`, `README.md`, `docs/*.md`).
+Data: 2026-10-26. Confronto tra `` (flussi ricavati dall'app decompilata) e implementazione (`../../../open_pico_local_api`, `examples/`, `README.md`, `docs/*.md`).
 
 Scope: solo configurazione singola (no master/slave).
 
@@ -44,7 +44,7 @@ Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia l
 | 19 | low | robustezza | `register_device` con `device_id` esistente ignora nuovo ip/port |
 | 20 | low | discovery | Discovery LAN con `idp=0`, senza ACK, richiede PIN |
 | 21 | low | lib-doc | Docs idp: "device mantiene contatore" presentato come fatto; "releases IDP range" falso |
-| 22 | low | lib-doc | `../command-flow.md`: risposta post-comando = stato completo (non verificato) |
+| 22 | low | lib-doc | `../../command-flow.md`: risposta post-comando = stato completo (non verificato) |
 | 23 | low | lib-doc | Uso LAN / porte fisse presentati come standard; app usa solo `192.168.4.1` |
 | 24 | low | gap | Comandi mancanti: `check_pin`, `upd_datetime`, `get/set_fasce`, `m_crono`, `pico_info` |
 | 25 | low | gap | Nessun provisioning, OTA, gestione PIN `null`/`"-1"` |
@@ -175,7 +175,7 @@ Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia l
 
 ## 26. Dead code — low
 
-`../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (coda singola, senza routing per idp) usato solo da `tests/test_pico_protocol.py`. Rimuovere o deprecare.
+`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (coda singola, senza routing per idp) usato solo da `tests/test_pico_protocol.py`. Rimuovere o deprecare.
 
 ## 27. Incoerenze in `` — low
 
@@ -185,7 +185,7 @@ Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia l
 
 ## Scartati
 
-- "IDP bruteforce in `../../scripts`": refutato. Il tool è `examples/idp_diagnostic.py`, già linkato in `docs/retry-logic.md:122`; il docstring avvisa già della durata.
+- "IDP bruteforce in `../../../scripts`": refutato. Il tool è `examples/idp_diagnostic.py`, già linkato in `docs/retry-logic.md:122`; il docstring avvisa già della durata.
 
 ## Priorità suggerite
 

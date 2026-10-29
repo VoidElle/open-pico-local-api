@@ -1,6 +1,6 @@
 # PICO local flows (decompiled Tecnosystemi app)
 
-Map of the PICO local flows derived from `Export-Pico/sources/it/tecnosystemi/TS` (JADX).
+Map of the PICO local flows derived from `../../../Export-Pico/sources/it/tecnosystemi/TS` (JADX).
 `file:line` references are relative to that folder. "(inferred)" = deduced, not read.
 Out of scope: VMC, SeiX, legacy ControlUnit, master/slave configurations (cascade).
 

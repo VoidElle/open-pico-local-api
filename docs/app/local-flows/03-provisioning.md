@@ -1,6 +1,6 @@
 # Provisioning and configuration
 
-Analyzed source: JADX of `it.tecnosystemi.TS`. All paths are relative to `Export-Pico/sources/it/tecnosystemi/TS/`. "(inferred)" = deduced, not read explicitly in the code.
+Analyzed source: JADX of `it.tecnosystemi.TS`. All paths are relative to `../../../Export-Pico/sources/it/tecnosystemi/TS`. "(inferred)" = deduced, not read explicitly in the code.
 UDP/ACK/idp/timeout transport: see [01-transport.md](01-transport.md) (not repeated). Post-provisioning runtime: [02-pico-runtime.md](02-pico-runtime.md). Bootloader/OTA: [04-firmware-ota.md](04-firmware-ota.md). Scope: PICO only; the other families (VMC, SeiX/P6X, legacy Control Unit) are out of scope.
 
 ## Index

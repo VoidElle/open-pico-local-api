@@ -3,7 +3,7 @@
 Scope: PICO activities (`PicoActivity`, `PicoCronoSetActivity`, `PICOCronoSummaryActivity`), models `Pico`, `PICOCronoObj`, adapter `PICOCronoSummaryAdapter`.
 UDP transport, `CmdPICO` envelope, ACK (`res=99`), `sendCMD` retry/timeout: see [01-transport.md](01-transport.md) (only referenced here). Provisioning/config: [03-provisioning.md](03-provisioning.md). OTA/bootloader: [04-firmware-ota.md](04-firmware-ota.md). PICO scope only.
 
-Conventions: paths relative to `Export-Pico/sources/it/tecnosystemi/TS/`. Abbreviations: `PA` = `Activity/PICO/PicoActivity.java`, `PS` = `Activity/PICO/PicoCronoSetActivity.java`, `PM` = `Activity/PICO/PICOCronoSummaryActivity.java`, `CP` = `Commands/CmdPICO.java`, `UD` = `Commands/UDPSocket.java`, `MP` = `Model/Pico.java`, `MO` = `Model/PICOCronoObj.java`, `TW` = `Threads/ThreadWebService.java`, `BA` = `Activity/BaseActivity.java`. Strings: `Export-Pico/resources/res/values/strings.xml` (EN) and `arrays.xml`. "(inferred)" = deduced, not read explicitly.
+Conventions: paths relative to `../../../Export-Pico/sources/it/tecnosystemi/TS`. Abbreviations: `PA` = `Activity/PICO/PicoActivity.java`, `PS` = `Activity/PICO/PicoCronoSetActivity.java`, `PM` = `Activity/PICO/PICOCronoSummaryActivity.java`, `CP` = `Commands/CmdPICO.java`, `UD` = `Commands/UDPSocket.java`, `MP` = `Model/Pico.java`, `MO` = `Model/PICOCronoObj.java`, `TW` = `Threads/ThreadWebService.java`, `BA` = `Activity/BaseActivity.java`. Strings: `Export-Pico/resources/res/values/strings.xml` (EN) and `arrays.xml`. "(inferred)" = deduced, not read explicitly.
 
 ## Index
 
@@ -385,7 +385,7 @@ sequenceDiagram
 
 ## 5. `mod` enum and UI map
 
-`MODE_*` constants (`PA:56-66`) and `setPCOM_Id(...)` in the listeners. EN labels from `strings.xml` (`pm_btn*`, `cr_*`). They match `DeviceModeEnum` in `open_pico_local_api/enums/device_mode_enum.py` (1..12).
+`MODE_*` constants (`PA:56-66`) and `setPCOM_Id(...)` in the listeners. EN labels from `strings.xml` (`pm_btn*`, `cr_*`). They match `DeviceModeEnum` in `../../../open_pico_local_api/enums/device_mode_enum.py` (1..12).
 
 | `mod` | Constant | Label (strings) | UI button / `listlayouts` index / variant | Control panel (`updateView`) | Air quality shown |
 |---|---|---|---|---|---|
@@ -569,7 +569,7 @@ Anomalies (read in the code):
 Open questions (not resolvable from decompilation alone):
 - Full structure of `ResDescr` (cloud `GetPICOState`): does it contain `lastpk` + flat fields? What does the device do with the `publish_sync_db` command?
 - Exact meaning of `vr` (values other than 1 and 3).
-- Whether the response to `upd_pico`/`set_fasce` is always `{res:1,...}` with the same `idp`, or whether some commands reply directly with the full `stato_sync` (the Python library describes the post-command `stato_sync` in `docs/command-flow.md`; the app does not handle it because a state with `idp` = command ends up in `lastCmdResp`, not in `receiveStato`).
+- Whether the response to `upd_pico`/`set_fasce` is always `{res:1,...}` with the same `idp`, or whether some commands reply directly with the full `stato_sync` (the Python library describes the post-command `stato_sync` in `../../command-flow.md`; the app does not handle it because a state with `idp` = command ends up in `lastCmdResp`, not in `receiveStato`).
 - Actual range of `spd_rich`/`spd_row` (0..100 assumed from the SeekBar) and meaning of `speed` (1..3) in the state.
 - Actual granularity accepted by the device for slot times (arbitrary minutes from midnight vs multiples of 15).
 - Index `[0]` and `[2]` of `par_amb`/`par_ext`: `[2]` is translated into arrows (trend/AQI), unit unknown.

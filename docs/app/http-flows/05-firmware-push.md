@@ -8,7 +8,7 @@
 4. Download: `GET /api/v1/FW?filename=<Path>` (type 5, binary), up to 5 attempts on 401. File saved only if the byte length equals the catalog size; otherwise `ok=false`, toast `ha_syncFWError`.
 
 ## Flashing
-Not online. "Update firmware" (`setApConfig`, `PicoActivity.java:1743`) joins the PICO Wi-Fi (`Pico_<SER>`, password `TS_<SER>`) and opens `PicoBootloaderActivity`, which pushes the downloaded file to the device over TCP 40060 (see [../app-flows/04-firmware-ota.md](../app-flows/04-firmware-ota.md)). The cloud is only the file source.
+Not online. "Update firmware" (`setApConfig`, `PicoActivity.java:1743`) joins the PICO Wi-Fi (`Pico_<SER>`, password `TS_<SER>`) and opens `PicoBootloaderActivity`, which pushes the downloaded file to the device over TCP 40060 (see [../app-flows/04-firmware-ota.md](../local-flows/04-firmware-ota.md)). The cloud is only the file source.
 Version hints from login: `LastFWVr`, `LastVrAndroid`, `LastVrAndroidText` (compared in the UI; no forced update found).
 
 ## Push notifications (FCM)

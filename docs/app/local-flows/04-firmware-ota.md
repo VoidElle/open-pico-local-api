@@ -1,6 +1,6 @@
 # PICO Firmware and OTA
 
-Paths relative to `Export-Pico/sources/it/tecnosystemi/TS/` (omitted in `file:line` references). UDP transport and the `CmdPICO` envelope are described in [01-transport.md](01-transport.md); PICO runtime in [02-pico-runtime.md](02-pico-runtime.md); Wi-Fi/AP onboarding in [03-provisioning.md](03-provisioning.md). Scope: PICO only.
+Paths relative to `../../../Export-Pico/sources/it/tecnosystemi/TS` (omitted in `file:line` references). UDP transport and the `CmdPICO` envelope are described in [01-transport.md](01-transport.md); PICO runtime in [02-pico-runtime.md](02-pico-runtime.md); Wi-Fi/AP onboarding in [03-provisioning.md](03-provisioning.md). Scope: PICO only.
 
 ## Table of contents
 
