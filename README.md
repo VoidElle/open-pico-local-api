@@ -696,7 +696,9 @@ Detailed documentation of the internal flows and architecture lives in [`docs/`]
 | [Retry Logic & IDP Sync](docs/retry-logic.md) | Two-level retry strategy; how IDP drift is detected and recovered; manual reset |
 | [Connection Lifecycle](docs/connection-lifecycle.md) | `connect()` / `disconnect()` flow; `auto_reconnect` decorator; `SharedTransportManager.shutdown()` |
 | [Auto-Discovery Flow](docs/auto-discovery.md) | Subnet probe; concurrent probe+collect; response validation; relation to registered devices |
-| [Cloud HTTP Flows](docs/app/http-flows/) | Protocol of the official app's cloud backend, used by `PicoCloudClient` |
+| [App Local Flows](docs/app/local-flows/) | UDP/TCP flows of the official app (decompiled): transport, runtime commands, provisioning, firmware OTA |
+| [App vs Library Diff](docs/app/local-flows/diff-app-api.md) | Mismatches between the official app's behaviour and this library (in Italian) |
+| [App Cloud HTTP Flows](docs/app/http-flows/) | Protocol of the official app's cloud backend, used by `PicoCloudClient` |
 
 ---
 
@@ -829,9 +831,9 @@ Runs the full unit test suite with verbose output.
 
 - **Python 3.11+**
 - **asyncio** support
-- **Local network access** to Pico device(s)
 - `aiohttp` and `cryptography` (installed automatically; used by the cloud client)
-- Cloud client only: internet access and a Pico cloud account
+- Local client (`PicoClient`): local network access to the Pico device(s)
+- Cloud client (`PicoCloudClient`): internet access and a Pico cloud account, no local network access needed
 
 ---
 
