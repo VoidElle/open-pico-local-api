@@ -43,5 +43,5 @@ class OperatingParametersModel:
         return self.night_mode == 1
 
     def is_led_state_on(self) -> bool:
-        """Check if LED is on."""
-        return self.led_on_off == 1
+        """Check if LED is on (app reads led_on_off_breve; 2 = off, 0 seen on a lit device)."""
+        return self.led_on_off_short != 2

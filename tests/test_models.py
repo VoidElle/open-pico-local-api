@@ -242,11 +242,11 @@ class TestOperatingParametersModel(unittest.TestCase):
         self.assertFalse(m.is_night_mode_active)
 
     def test_led_state_on(self):
-        m = self._make(led_on_off=1)
-        self.assertTrue(m.is_led_state_on())
+        for v in (0, 1):
+            self.assertTrue(self._make(led_on_off_short=v).is_led_state_on())
 
     def test_led_state_off(self):
-        m = self._make(led_on_off=0)
+        m = self._make(led_on_off=1, led_on_off_short=2)
         self.assertFalse(m.is_led_state_on())
 
 
