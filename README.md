@@ -39,9 +39,10 @@
 - **Concurrent device operations**
 
 ### ☁️ **Cloud Fallback**
-- `PicoCloudClient`: same API as `PicoClient`, over the official HTTPS cloud backend
-- Use it **only when the local UDP connection is not a suitable flow** (e.g. device on another network or UDP unreachable). Prefer local UDP otherwise: it is faster, needs no internet or account, and gives immediate results
-- Extra dependencies (`aiohttp`, `cryptography`) are installed automatically
+- Control your Pico over the internet, using your Tecnosystemi account, with the same commands as the local client
+- Meant as a backup: use it **only when a direct local connection isn't possible**, for example when you're away from home or the device is on a different network
+- When you're on the same network, stick with the local connection: it's faster, works without internet and needs no account
+- Everything needed is installed automatically
 - See [Cloud Client](#️-cloud-client)
 
 ---
@@ -679,8 +680,6 @@ Differences vs local:
 - `bruteforce_idp` raises `NotSupportedError` (no IDP negotiation).
 - The session lasts about 1 h; the client logs in again after 55 min or on HTTP 401.
 - Rejected credentials raise `PicoAuthError`.
-
-> Unverified against the real backend: the server accepting a client-generated `DeviceId`, an empty `TokenPush`, and the exact `Timezone` format. Tested only against a fake backend built from the decompiled app.
 
 Protocol: [`docs/app/http-flows/`](docs/app/http-flows/). Cloud examples: [`examples/cloud/`](examples/cloud/), documented in [`examples/README.md`](examples/README.md).
 
