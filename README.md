@@ -1,4 +1,4 @@
-# 🌊 Open Pico Local API
+# 🌊 Open Pico Local API (+ Cloud fallback)
 
 > *Asynchronous Python library for Tecnosystemi Pico IoT devices*
 
@@ -37,6 +37,12 @@
 - Fan speed control
 - Humidity & LED settings
 - **Concurrent device operations**
+
+### ☁️ **Cloud Fallback**
+- `PicoCloudClient`: same API as `PicoClient`, over the official HTTPS cloud backend
+- Use it **only when the local UDP connection is not a suitable flow** (e.g. device on another network or UDP unreachable). Prefer local UDP otherwise: it is faster, needs no internet or account, and gives immediate results
+- Extra dependencies (`aiohttp`, `cryptography`) are installed automatically
+- See [Cloud Client](#️-cloud-client)
 
 ---
 
@@ -155,6 +161,7 @@ if __name__ == "__main__":
 - [IDP Management](#-idp-management)
 - [Data Models](#️-data-models)
 - [Exception Handling](#-exception-handling)
+- [Cloud Client](#️-cloud-client)
 - [Internals](#-internals)
 - [Examples](#-examples)
 - [Scripts](#️-scripts)
@@ -652,6 +659,33 @@ async def safe_operation():
 
 ---
 
+## ☁️ Cloud Client
+
+> **Note:** use the cloud client only if the local UDP connection is not a suitable flow. Local UDP is the primary, recommended path: it works offline, needs no account, has lower latency and returns results immediately. The cloud adds a dependency on the vendor backend, requires internet and credentials, and applies commands asynchronously.
+
+`PicoCloudClient` subclasses `PicoClient`, so `turn_on`, `change_operating_mode`, `change_fan_speed`, `set_night_mode`, `set_led_status`, `set_target_humidity` and `reset_maintenance` are inherited. Only the transport changes: UDP is replaced by `https://proair.azurewebsites.net`.
+
+```python
+from open_pico_local_api.cloud import PicoCloudClient
+
+async with PicoCloudClient("me@x.com", "password", serial="SER123", pin="1234") as pico:
+    status = await pico.get_status()      # GET GetPICOState
+    await pico.turn_on()                  # POST SendPicoCmd
+    plants = await pico.get_plants()
+```
+
+Differences vs local:
+- Commands return only a cloud ack; the device applies them asynchronously. Poll `get_status()` to see the result.
+- `bruteforce_idp` raises `NotSupportedError` (no IDP negotiation).
+- The session lasts about 1 h; the client logs in again after 55 min or on HTTP 401.
+- Rejected credentials raise `PicoAuthError`.
+
+> Unverified against the real backend: the server accepting a client-generated `DeviceId`, an empty `TokenPush`, and the exact `Timezone` format. Tested only against a fake backend built from the decompiled app.
+
+Protocol: [`docs/app/http-flows/`](docs/app/http-flows/). Cloud examples: [`examples/cloud/`](examples/cloud/), documented in [`examples/README.md`](examples/README.md).
+
+---
+
 ## 🔬 Internals
 
 Detailed documentation of the internal flows and architecture lives in [`docs/`](docs/):
@@ -663,6 +697,7 @@ Detailed documentation of the internal flows and architecture lives in [`docs/`]
 | [Retry Logic & IDP Sync](docs/retry-logic.md) | Two-level retry strategy; how IDP drift is detected and recovered; manual reset |
 | [Connection Lifecycle](docs/connection-lifecycle.md) | `connect()` / `disconnect()` flow; `auto_reconnect` decorator; `SharedTransportManager.shutdown()` |
 | [Auto-Discovery Flow](docs/auto-discovery.md) | Subnet probe; concurrent probe+collect; response validation; relation to registered devices |
+| [Cloud HTTP Flows](docs/app/http-flows/) | Protocol of the official app's cloud backend, used by `PicoCloudClient` |
 
 ---
 
@@ -702,12 +737,23 @@ open-pico-local-api/
 │   ├── bump_version.sh                # Bump version across all files
 │   └── run_tests.sh                   # Run the full test suite
 ├── examples/
-│   ├── basic_control.py               # Connect, read status, control a single device
-│   ├── multi_device.py                # Concurrent control of multiple devices
-│   ├── auto_discovery.py              # Discover devices then read their status
-│   ├── adaptive_climate.py            # Auto-select mode from sensor readings
-│   ├── monitoring.py                  # Continuous polling with alerts
-│   └── maintenance.py                 # Check and reset filter maintenance flag
+│   ├── local/                         # Local UDP examples
+│   │   ├── basic_control.py           # Connect, read status, control a single device
+│   │   ├── multi_device.py            # Concurrent control of multiple devices
+│   │   ├── auto_discovery.py          # Discover devices then read their status
+│   │   ├── adaptive_climate.py        # Auto-select mode from sensor readings
+│   │   ├── monitoring.py              # Continuous polling with alerts
+│   │   ├── maintenance.py             # Check and reset filter maintenance flag
+│   │   └── idp_diagnostic.py          # IDP bruteforce diagnostic
+│   └── cloud/                         # Cloud examples (PicoCloudClient)
+│       ├── _common.py                 # Shared helpers
+│       ├── login.py                   # Login only
+│       ├── list_devices.py            # Plants and devices of the account
+│       ├── basic_cloud.py             # Status, on, mode change
+│       ├── simple_actions.py          # One-shot CLI actions
+│       ├── adaptive_cloud.py          # Sensor-driven mode and fan
+│       ├── monitor_cloud.py           # Polling with diffs and backoff
+│       └── multi_device_cloud.py      # All devices of the account
 ├── open_pico_local_api/
 │   ├── __init__.py                    # Public API re-exports
 │   ├── pico_client.py                 # Main client class
@@ -729,19 +775,27 @@ open-pico-local-api/
 │   │   ├── auto_reconnect.py          # Auto-reconnect decorator
 │   │   ├── constants.py               # Mode constants
 │   │   └── pico_protocol.py           # Base UDP protocol
+│   ├── cloud/
+│   │   ├── __init__.py                # Exports PicoCloudClient, PicoAuthError
+│   │   ├── pico_cloud_client.py       # HTTPS transport, subclass of PicoClient
+│   │   ├── crypto.py                  # PicoCipher (request encryption)
+│   │   └── exceptions.py              # PicoAuthError
 │   └── exceptions/
 │       ├── pico_device_error.py
 │       ├── pico_connection_error.py
 │       ├── pico_timeout_error.py
 │       └── not_supported_error.py
 └── tests/
-    ├── test_exceptions.py
-    ├── test_enums.py
-    ├── test_models.py
-    ├── test_shared_transport_manager.py
-    ├── test_pico_auto_discovery.py
-    ├── test_auto_reconnect.py
-    └── test_pico_protocol.py
+    ├── local/                         # Local UDP tests
+    │   ├── test_exceptions.py
+    │   ├── test_enums.py
+    │   ├── test_models.py
+    │   ├── test_shared_transport_manager.py
+    │   ├── test_pico_auto_discovery.py
+    │   ├── test_auto_reconnect.py
+    │   └── test_pico_protocol.py
+    └── cloud/                         # Cloud tests
+        └── test_cloud_client.py
 ```
 
 ---
@@ -777,13 +831,14 @@ Runs the full unit test suite with verbose output.
 - **Python 3.11+**
 - **asyncio** support
 - **Local network access** to Pico device(s)
-- No third-party dependencies - stdlib only
+- `aiohttp` and `cryptography` (installed automatically; used by the cloud client)
+- Cloud client only: internet access and a Pico cloud account
 
 ---
 
 ## 🧪 Testing
 
-The library ships with a full unit test suite (96 tests) covering all modules. No third-party packages needed.
+The library ships with a full unit test suite (101 tests) covering all modules.
 
 ### Run locally
 
@@ -794,7 +849,7 @@ The library ships with a full unit test suite (96 tests) covering all modules. N
 Or directly:
 
 ```bash
-python3 -W all -m unittest discover -s tests -v
+python3 -W all -m unittest discover -s tests -t . -v
 ```
 
 ### CI
@@ -812,7 +867,8 @@ Tests run automatically on every push and pull request via GitHub Actions, acros
 | `pico_auto_discovery.py` | 12 |
 | `utils/auto_reconnect.py` | 6 |
 | `utils/pico_protocol.py` | 6 |
-| **Total** | **96** |
+| `cloud/` | 5 |
+| **Total** | **101** |
 
 ---
 

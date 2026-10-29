@@ -1,6 +1,6 @@
 # 04 - PICO cloud runtime
 
-Same screen (`PicoActivity`) as the local flow. Branch point is `pico.getOffline()`; online = REST, offline = UDP ([../app-flows/02-pico-runtime.md](../local-flows/02-pico-runtime.md)). State parsing and command bodies are shared.
+Same screen (`PicoActivity`) as the local flow. Branch point is `pico.getOffline()`; online = REST, offline = UDP ([../local-flows/02-pico-runtime.md](../local-flows/02-pico-runtime.md)). State parsing and command bodies are shared.
 
 ## State polling
 `PicoActivity.startStatoTimer()` (`Activity/PICO/PicoActivity.java:803`): `Timer`, period **5000 ms**, does nothing in demo mode.

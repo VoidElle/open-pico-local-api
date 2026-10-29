@@ -119,4 +119,4 @@ if result["found"] is not None:
 It returns `{"found": <idp or None>, "responsive_idps": [...], "probed": <count>}`.
 
 Keep the range narrow when possible: a full 10000-wide sweep at 0.3s per IDP takes ~50 minutes.
-See [`examples/idp_diagnostic.py`](../examples/idp_diagnostic.py) for a ready-to-run tool.
+See [`examples/local/idp_diagnostic.py`](../examples/local/idp_diagnostic.py) for a ready-to-run tool.

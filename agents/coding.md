@@ -50,8 +50,8 @@ Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
 - Python 3.11+ required
 
 ## Testing
-- Test suite lives in `tests/` - 96 tests, stdlib only, zero dependencies
-- Run locally: `./run_tests.sh` or `python3 -W all -m unittest discover -s tests -v`
+- Test suite lives in `tests/` - 101 tests (`tests/local/` UDP, `tests/cloud/` cloud client); runtime deps: `aiohttp`, `cryptography`
+- Run locally: `./scripts/run_tests.sh` or `python3 -W all -m unittest discover -s tests -t . -v`
 - CI runs on push/PR via `.github/workflows/tests.yml` (Python 3.11, 3.12, 3.13)
-- Always run tests after changes; all 96 must pass with `-W all` (zero warnings)
+- Always run tests after changes; all 101 must pass with `-W all` (zero warnings)
 - `SharedTransportManager` singleton tests must reset `_instance = None; _lock = None` in `setUp`

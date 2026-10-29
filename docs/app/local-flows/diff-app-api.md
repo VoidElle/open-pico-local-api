@@ -175,7 +175,7 @@ Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia l
 
 ## 26. Dead code — low
 
-`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (coda singola, senza routing per idp) usato solo da `tests/test_pico_protocol.py`. Rimuovere o deprecare.
+`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (coda singola, senza routing per idp) usato solo da `tests/local/test_pico_protocol.py`. Rimuovere o deprecare.
 
 ## 27. Incoerenze in `` — low
 
@@ -185,7 +185,7 @@ Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia l
 
 ## Scartati
 
-- "IDP bruteforce in `../../../scripts`": refutato. Il tool è `examples/idp_diagnostic.py`, già linkato in `docs/retry-logic.md:122`; il docstring avvisa già della durata.
+- "IDP bruteforce in `../../../scripts`": refutato. Il tool è `examples/local/idp_diagnostic.py`, già linkato in `docs/retry-logic.md:122`; il docstring avvisa già della durata.
 
 ## Priorità suggerite
 

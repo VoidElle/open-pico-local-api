@@ -89,3 +89,20 @@ _instance = self      _initialized = True     update bisect index
 When `PicoClient.disconnect()` is called, `unregister_device()` removes the device from
 `_devices`, `_idp_start_to_device`, and `_idp_sorted_starts`. The IDP range is released but
 not reclaimed - new registrations always get a fresh range appended at the top.
+
+## Cloud Transport (alternative to UDP)
+
+`open_pico_local_api/cloud/PicoCloudClient` subclasses `PicoClient` and swaps only the transport:
+UDP (`SharedTransportManager`, IDP ranges, port 40069) is replaced by HTTPS calls to
+`https://proair.azurewebsites.net`. The public command API is inherited unchanged.
+
+| | Local (`PicoClient`) | Cloud (`PicoCloudClient`) |
+|---|---|---|
+| Transport | UDP, shared socket | HTTPS (`aiohttp`) |
+| IDP / `SharedTransportManager` | used | not used (`bruteforce_idp` raises `NotSupportedError`) |
+| Result of a command | device response | cloud ack; poll `get_status()` |
+| Needs | LAN access, device PIN | internet, account credentials |
+
+Use the cloud only when the local UDP flow is not suitable. Protocol details:
+[`app/http-flows/`](app/http-flows/README.md). Implementation: `open_pico_local_api/cloud/`
+(`pico_cloud_client.py`, `crypto.py`, `exceptions.py`). Tests: `tests/cloud/`. Examples: `examples/cloud/`.

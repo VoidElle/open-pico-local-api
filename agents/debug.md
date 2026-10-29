@@ -36,7 +36,7 @@ Diagnose issues in the async UDP communication stack of this Pico device library
 3. Verify `await client.connect()` completed without raising before issuing commands
 4. For multi-device setups, confirm each device gets a distinct IDP range via `SharedTransportManager.register_device`
 5. Inspect raw UDP traffic with `tcpdump -i any udp port 40069 or port 40070 -A`
-6. Run the test suite to confirm no regressions: `./run_tests.sh`
+6. Run the test suite to confirm no regressions: `./scripts/run_tests.sh`
 
 ## Key Code Paths
 - Packet routing: `SharedPicoProtocol.datagram_received` → `_find_device_by_idp` → `registration.response_queue.put_nowait`

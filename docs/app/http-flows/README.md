@@ -2,7 +2,7 @@
 
 Map of the cloud flows derived from `../../../Export-Pico/sources/it/tecnosystemi/TS` (JADX).
 `file:line` references are relative to that folder. "(inferred)" = deduced, not read.
-Counterpart of [../app-flows](../app/offline-flows/README.md) (local UDP flow).
+Counterpart of [../local-flows](../local-flows/README.md) (local UDP flow).
 Out of scope: VMC, SeiX, legacy ControlUnit, master/slave cascade (`PicoCascataActivity`).
 
 | File | Content |
@@ -22,3 +22,5 @@ Key points:
 - All responses are JSON `{ResCode, ResDescr}`. `ResCode 0` = OK, `2` = wrong PIN (device calls). HTTP 400 carries the same body.
 - Command POSTs return only an ack. Real state comes from the next 5 s poll.
 - Graph note: the codebase-memory index holds only folders for this decompiled Java (no symbols), so references were traced by reading/grepping files.
+
+Implementation of these flows: `open_pico_local_api/cloud/` (`PicoCloudClient`). Examples: `examples/cloud/`. Tests: `tests/cloud/`. Use it only when the local UDP flow is not suitable.
