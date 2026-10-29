@@ -61,7 +61,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api==2.6.0"
+  "open-pico-local-api==2.6.1"
 ]
 ```
 
@@ -587,7 +587,7 @@ print(f"Is On: {op.is_on}")
 print(f"Fan Speed: {op.speed}%")
 print(f"Fan Running: {op.fan_running}")
 print(f"Night Mode: {op.is_night_mode_active}")
-print(f"LED On: {op.is_led_state_on()}")
+print(f"LED On: {op.is_led_state_on}")
 ```
 
 ### **SystemInfoModel**

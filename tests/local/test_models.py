@@ -243,11 +243,11 @@ class TestOperatingParametersModel(unittest.TestCase):
 
     def test_led_state_on(self):
         for v in (0, 1):
-            self.assertTrue(self._make(led_on_off_short=v).is_led_state_on())
+            self.assertTrue(self._make(led_on_off_short=v).is_led_state_on)
 
     def test_led_state_off(self):
         m = self._make(led_on_off=1, led_on_off_short=2)
-        self.assertFalse(m.is_led_state_on())
+        self.assertFalse(m.is_led_state_on)
 
 
 if __name__ == "__main__":
