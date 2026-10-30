@@ -61,7 +61,7 @@ Add to your integration's `manifest.json` and Home Assistant will install the li
 
 ```json
 "requirements": [
-  "open-pico-local-api==2.6.1"
+  "open-pico-local-api==2.6.2"
 ]
 ```
 
