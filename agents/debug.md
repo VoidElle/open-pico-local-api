@@ -58,6 +58,11 @@ Protocol reference: `docs/app/http-flows/` (`01` auth/token, `02` login codes, `
 **Cause:** expected: `SendPicoCmd` is only a cloud ack, delivery to the device is asynchronous (backend -> MQTT, inferred). No `res: 99` ACK exists in cloud mode.  
 **Fix:** poll `get_status()` for a few seconds (the app polls every 5 s). If it never applies, the device may be offline from the cloud.
 
+### Cloud status: sensors at 0 or LED state inverted
+**Symptom:** cloud `get_status()` shows temperature/humidity `0`, empty `par_rt`, `memfree` 0, or `is_led_state_on` True with the LED off.  
+**Cause:** `ResDescr` parsed from the flat `frm:"db"` fields instead of `lastpk`. Sensors exist only in `lastpk`; the db copy re-encodes `led_on_off_breve` (off = `0`, device sends `2`).  
+**Fix:** keep the merge in `PicoCloudClient.get_status` with `lastpk` winning. Compare both copies with `verbose=True` or `examples/cloud/raw_log_cloud.py`.
+
 ### Other cloud errors
 - `PicoDeviceError("Cloud rejected request (ResCode N)")` - server-side logical error (HTTP 400 carries the same body)
 - `PicoDeviceError("Non-JSON reply ...")` - backend/proxy error page
@@ -79,7 +84,7 @@ Protocol reference: `docs/app/http-flows/` (`01` auth/token, `02` login codes, `
 - IDP allocation: `SharedTransportManager.register_device` assigns `(range_start, range_size)` per device
 - Public accessors: use `get_device_registration(device_id)` and `unmatched_queue` property instead of accessing `_devices`/`_unmatched_queue` directly
 - Cloud command flow: inherited public method -> `PicoCloudClient._execute_command_with_retry` -> `_device_call` (lock, retry, re-login, token bump) -> `_request` (aiohttp, maps errors/401)
-- Cloud status: `get_status` -> `GET GetPICOState` -> `ResDescr` (`stato_sync` JSON) -> `PicoDeviceModel.from_dict`
+- Cloud status: `get_status` -> `GET GetPICOState` -> `ResDescr` (flat db fields + `lastpk` device packet, `lastpk` wins) -> `PicoDeviceModel.from_dict`
 
 ## Exception Classes
 - `PicoDeviceError` - base class

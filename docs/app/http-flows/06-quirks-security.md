@@ -29,6 +29,6 @@ Observed in the decompiled app. Relevant if a client reimplements this API.
 ## Reimplementation hints (for this repo)
 1. Login: `POST /apiTS/v2/Login` with Basic `UsrProAir:PwdProAir`, `Token: FIX_TOKEN`, body as in [02-account-login.md](02-account-login.md). Keep the returned `Token`.
 2. Before each later call: decrypt token, `counter+1`, re-encrypt, send; Basic user = email.
-3. Poll `GetPICOState` every 5 s; parse `ResDescr` with the local `stato_sync` parser.
+3. Poll `GetPICOState` every 5 s; parse the device packet in `ResDescr.lastpk` with the local `stato_sync` parser, not the flat db fields (they re-encode some values, see [04-pico-cloud-runtime.md](04-pico-cloud-runtime.md#resdescr-shape-observed-on-a-live-device-fw-1012)).
 4. Send commands as `SendPicoCmd` with `frm:"mqtt"` and double-encoded `Cmd`.
 5. Re-login before 1 h.

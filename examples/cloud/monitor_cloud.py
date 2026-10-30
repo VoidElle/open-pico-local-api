@@ -18,7 +18,7 @@ from open_pico_local_api.cloud import PicoCloudClient, PicoAuthError
 
 
 def snapshot(s) -> dict:
-    return {"power": "ON" if s.is_on else "OFF", "mode": s.operating.mode.name, "fan": s.operating.speed,
+    return {"power": "ON" if s.is_on else "OFF", "mode": s.operating.mode.name, "fan": s.operating.speed_requested,
             "temp": s.sensors.temperature_celsius, "hum": s.sensors.humidity_percent,
             "co2": s.sensors.eco2, "errors": bool(s.parameters.has_errors)}
 

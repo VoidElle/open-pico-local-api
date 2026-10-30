@@ -298,7 +298,7 @@ if (jSONObject.has("led_on_off_breve")) {
 | `par_amb` | `par_amb` (List<Int>) | indoor air quality | 3.3 |
 | `par_ext` | `par_ext` (List<Int>) | outdoor air quality | 3.3 |
 
-Keys present in the state and read only by the debug panel (`PA:187-230`, they do not enter `Pico`): `fw_note`, `AMB_tmpr` (indoor temp.), `EXT_tmpr` (outdoor temp.), `v_tmpr` (read temp.), `spd_row`. On the cloud branch `updateStatoLabel` does `new JSONObject(obj.getString("lastpk"))`: the cloud response therefore also contains `lastpk` (JSON string of the last device packet); full structure of `ResDescr` not verifiable (open question).
+Keys present in the state and read only by the debug panel (`PA:187-230`, they do not enter `Pico`): `fw_note`, `AMB_tmpr` (indoor temp.), `EXT_tmpr` (outdoor temp.), `v_tmpr` (read temp.), `spd_row`. On the cloud branch `updateStatoLabel` does `new JSONObject(obj.getString("lastpk"))`: the cloud response therefore also contains `lastpk` (JSON string of the last device packet). Structure of `ResDescr` confirmed on a live device: [../http-flows/04-pico-cloud-runtime.md](../http-flows/04-pico-cloud-runtime.md#resdescr-shape-observed-on-a-live-device-fw-1012).
 
 The debug panel (`lyDebug`) is unreachable: the `Runnable` that makes it visible in `getMenu` is created but never added (`PA:2021-2027`, dead code).
 
@@ -567,7 +567,7 @@ Anomalies (read in the code):
 8. `sendAk` sends the ACK even to messages with an unknown `idp` (unsolicited pushes), if they have `res != 99` and `cmd`.
 
 Open questions (not resolvable from decompilation alone):
-- Full structure of `ResDescr` (cloud `GetPICOState`): does it contain `lastpk` + flat fields? What does the device do with the `publish_sync_db` command?
+- What does the device do with the `publish_sync_db` command? (The `ResDescr` structure, flat db fields + `lastpk`, is now confirmed: see [../http-flows/04-pico-cloud-runtime.md](../http-flows/04-pico-cloud-runtime.md#resdescr-shape-observed-on-a-live-device-fw-1012).)
 - Exact meaning of `vr` (values other than 1 and 3).
 - Whether the response to `upd_pico`/`set_fasce` is always `{res:1,...}` with the same `idp`, or whether some commands reply directly with the full `stato_sync` (the Python library describes the post-command `stato_sync` in `../../command-flow.md`; the app does not handle it because a state with `idp` = command ends up in `lastCmdResp`, not in `receiveStato`).
 - Actual range of `spd_rich`/`spd_row` (0..100 assumed from the SeekBar) and meaning of `speed` (1..3) in the state.

@@ -10,8 +10,12 @@ from open_pico_local_api.cloud.crypto import PicoCipher
 from open_pico_local_api import DeviceModeEnum, PicoDeviceError
 
 ANDROID_ID = "0123456789abcdef"
-STATE = {"idp": 1, "frm": "mst", "cmd": "stato_sync", "res": 1, "mod": 6, "on_off": 1,
-         "v_tmpr": 21.5, "v_umd": 45.0}
+# Real GetPICOState shape: flat backend ("db") fields + `lastpk` = last device packet as a JSON string.
+STATE = {"cmd": "stato_sync", "frm": "db", "res": 1, "mod": 6, "on_off": 1, "spd_rich": 100,
+         "name": "VMC - CG", "led_on_off_breve": 0, "reset": None, "timezone": None,
+         "lastpk": json.dumps({"idp": 13398, "frm": "mst", "cmd": "stato_sync", "res": 1, "mod": 6,
+                               "on_off": 1, "name": "Camera grande", "led_on_off_breve": 2, "fw_note": "RC00",
+                               "v_tmpr": 21.5, "v_umd": 45.0, "memfree": 96828})}
 
 
 def make_backend(sent: list) -> web.Application:
@@ -75,6 +79,11 @@ class CloudClientTest(unittest.IsolatedAsyncioTestCase):
         async with self.client() as c:
             status = await c.get_status()          # token counter 2
             self.assertEqual(status.operating.mode, DeviceModeEnum.COMFORT_SUMMER)
+            self.assertEqual((status.sensors.temperature_celsius, status.sensors.humidity_percent), (21.5, 45.0))
+            self.assertEqual((status.idp, status.system.memory_free), (13398, 96828))
+            # db re-encodes LED off as 0; the device's 2 must win.
+            self.assertEqual((status.device_info.name, status.operating.is_led_state_on), ("Camera grande", False))
+            self.assertEqual(status.operating.speed_requested, 100)  # db-only key still used
             await c.change_operating_mode(DeviceModeEnum.HEAT_RECOVERY)   # counter 3
         cmd = json.loads(self.sent[0]["Cmd"])
         self.assertEqual((cmd["cmd"], cmd["frm"], cmd["mod"], cmd["pin"]), ("upd_pico", "mqtt", 1, "1234"))

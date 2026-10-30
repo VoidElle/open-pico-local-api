@@ -36,14 +36,14 @@ async def evaluate(pico: PicoCloudClient) -> None:
     s = await pico.get_status()
     mode, fan = decide(s.sensors.humidity_percent, s.sensors.eco2)
     print(f"humidity={s.sensors.humidity_percent}% co2={s.sensors.eco2}ppm "
-          f"| now {s.operating.mode.name}/{s.operating.speed}% -> want {mode.name}/{fan}%")
+          f"| now {s.operating.mode.name}/{s.operating.speed_requested}% -> want {mode.name}/{fan}%")
 
     if not s.is_on:
         await pico.turn_on()
     if s.operating.mode != mode:
         await pico.change_operating_mode(mode)
         await asyncio.sleep(6)  # let the device apply the mode before fan control is validated
-    if s.operating.speed != fan:
+    if s.operating.speed_requested != fan:
         try:
             await pico.change_fan_speed(fan)
         except NotSupportedError:

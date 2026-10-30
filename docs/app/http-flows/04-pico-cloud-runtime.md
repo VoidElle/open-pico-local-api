@@ -9,10 +9,35 @@ Per tick, online branch (`:872`):
 GET /api/v1/GetPICOState?picoSerial=<SER>&PIN=<PIN>      (type 26)
 ```
 - 4th ctor arg = `first`: progress spinner only on the first request.
-- Reply HTTP 200 + `ResCode 0`: `ResDescr` = the same `stato_sync` payload the device sends locally -> `receiveStato()` -> `pico.receivedSync(str)` -> UI.
+- Reply HTTP 200 + `ResCode 0`: `ResDescr` = backend state record (not the raw device packet, see below) -> `receiveStato()` -> `pico.receivedSync(str)` -> UI.
 - Staleness: if no state for >15 s, one toast per 15 s (`zone_errors[5]`) and error code `10004` is injected into the Pico (`:826-856`).
 - `picoCMD` flag: after a successful command the next state reply is **dropped once** (`receiveStato:788`) so the UI keeps the optimistic value instead of an older server snapshot.
 - Timer is cancelled/paused when the PIN dialog is open (`pausastato`).
+
+### `ResDescr` shape (observed on a live device, fw 1.0.12)
+`ResDescr` is a JSON string with two copies of the state:
+- **Flat fields, `frm:"db"`**: the backend's own record. Only control fields: `on_off`, `mod`, `speed`, `spd_row`, `spd_rich`, `night_mod`, `s_umd`, `name`, `led_on_off`, `led_on_off_breve`, `led_color`, `id_slave`, `has_slave`, `err`, `man`, `par_ext`, `par_amb`, `m_crono`, `tw_active`, `ip`, `fw_ver`, `vr`, `w_rssi`, `res`, plus `reset`/`timezone` (seen `null`).
+- **`lastpk`**: JSON string (third level of encoding) of the last `stato_sync` the device sent (`frm:"mst"`, own `idp`). Same keys and encoding as the local UDP reply. Sensors (`v_tmpr`, `v_umd`, `v_ECo2`, ...), `par_rt`/`par_mm`, `fw_note`, `modello`, `memfree`, `up_time`, ... exist **only** here.
+
+```
+{"ResCode":0,"ResDescr":"{\"cmd\":\"stato_sync\",\"frm\":\"db\",\"on_off\":2,\"mod\":1,...,
+  \"lastpk\":\"{\\\"idp\\\":13398,\\\"frm\\\":\\\"mst\\\",\\\"v_tmpr\\\":23.56,...}\", ...}"}
+```
+
+The two copies do **not** always agree, because the db copy re-encodes some fields. Measured by toggling the LED via `SendPicoCmd` (`[led_on_off, led_on_off_breve, led_color]`, both copies updated within one 6 s poll):
+
+| moment | flat (`db`) | `lastpk` (device) |
+|---|---|---|
+| initial | `[1, 1, 0]` | `[1, 0, 1]` |
+| LED off | `[0, 0, 0]` | `[0, 2, 1]` |
+| LED on | `[1, 1, 0]` | `[1, 1, 1]` |
+
+- `led_on_off_breve`: device uses the local encoding (`2` = off, `1`/`0` = on); db stores a boolean (`0` = off). Reading the db value with the local parser reports an off LED as on.
+- `led_color`: constant `0` in db vs `1` on the device: different encoding, not staleness.
+- `name`: db holds the name given in the app/account (`"VMC - CG"`), `lastpk` the name stored on the device (`"Camera grande"`).
+- Fan speed (`speed`, `spd_rich`, `spd_row`) matched in both copies before and after `change_fan_speed`.
+
+**Library rule** (`PicoCloudClient.get_status`): decode `lastpk` and let it win; flat fields only fill keys `lastpk` lacks (and `null` flat values are dropped). The cloud status is then parsed exactly like a local reply. The app's account name stays in `raw_data["name"]`; the raw `lastpk` string in `raw_data["lastpk"]`. The app itself feeds the flat fields to `receivedSync` and reads `lastpk` only in its unreachable debug panel, so it shows the db encoding.
 
 ## Commands
 Entry `updatePico(n)` builds a `CmdPICO` (same bodies as local: `upd_pico`, `upd_led`, `upd_pman_reset`, `upd_pico_mcrono`, ...). Online path `sendCmdUpdPico` (`:1555`):
@@ -52,5 +77,5 @@ After a get, offline devices also push `UPD_DateTime`; online ones do not.
 User tap -> updatePico -> tmpPico changed
  -> POST SendPicoCmd {Serial,Pin,Cmd:"{..frm:mqtt..}"}  [Authorization Basic, Token]
  <- 200 {"ResCode":0}   -> pico=tmpPico, picoCMD=true
- -> (5 s) GET GetPICOState ... <- {"ResCode":0,"ResDescr":"<stato_sync>"}  (first one ignored)
+ -> (5 s) GET GetPICOState ... <- {"ResCode":0,"ResDescr":"<db record + lastpk>"}  (first one ignored)
 ```

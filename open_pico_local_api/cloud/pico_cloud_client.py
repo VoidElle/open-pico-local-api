@@ -123,13 +123,23 @@ class PicoCloudClient(PicoClient):
     # ----------------------------
 
     async def get_status(self, retry: bool = True) -> PicoDeviceModel:
-        """GET GetPICOState; `ResDescr` carries the same `stato_sync` JSON as the UDP reply."""
+        """
+        GET GetPICOState. `ResDescr` is the backend's `frm:"db"` record: control fields (on_off, mod,
+        speed, led_*, name, ...) flat, plus `lastpk` = JSON string of the last device `stato_sync`,
+        the only place with sensors, parameter arrays and system info. Parsed like a local reply.
+        """
         self._require_connected()
         res = await self._device_call(
             "GET", f"/api/v1/GetPICOState?picoSerial={self.serial}&PIN={self.pin}", None, retry)
         try:
             descr = res["ResDescr"]
-            return PicoDeviceModel.from_dict(json.loads(descr) if isinstance(descr, str) else descr)
+            state = json.loads(descr) if isinstance(descr, str) else descr
+            last = state.get("lastpk") or {}
+            if isinstance(last, str):
+                last = json.loads(last)
+            # lastpk wins: the db copy re-encodes some fields (led_on_off_breve off = 0, device sends 2),
+            # so only lastpk matches the local protocol the model parses. db only fills missing keys.
+            return PicoDeviceModel.from_dict({**{k: v for k, v in state.items() if v is not None}, **last})
         except Exception as e:
             raise PicoDeviceError(f"Failed to parse device status: {e}")
 

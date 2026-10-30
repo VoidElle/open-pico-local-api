@@ -28,7 +28,7 @@ Reverse-engineered from the official app; spec in `docs/app/http-flows/` (read i
 - Auth: Basic `<email>:PwdProAir` (`UsrProAir` before login) + `Token` header. Login uses `FIX_TOKEN`; every later call bumps the rolling token counter (decrypt `<text>_<n>`, n+1, re-encrypt)
 - Session is 1 h hard from login, no refresh: client re-logs in after `SESSION_TTL` (55 min) or on HTTP 401
 - Replies are `{ResCode, ResDescr}`; HTTP 400 carries the same body. `ResCode 0` OK, `2` wrong PIN. Login codes in `_LOGIN_ERRORS`
-- `GetPICOState`: `ResDescr` is the same `stato_sync` JSON as the UDP reply -> `PicoDeviceModel.from_dict`
+- `GetPICOState`: `ResDescr` is the backend `frm:"db"` record (control fields only) plus `lastpk`, a JSON string of the device's last `stato_sync`. `get_status` merges them with `lastpk` winning, then `PicoDeviceModel.from_dict`. Never let the flat fields win: they re-encode some values (`led_on_off_breve` off = `0` instead of `2`). Details: `docs/app/http-flows/04-pico-cloud-runtime.md`
 - `SendPicoCmd`: device command dict serialized as a string in `Cmd`, with `frm: "mqtt"` and the client's own `idp` (1..501 counter). The cloud only acks; the device applies the command asynchronously, no `res: 99` ACK
 
 ## UDP Protocol

@@ -37,7 +37,7 @@ async def main() -> None:
         match args.action:
             case "status":
                 s = await pico.get_status()
-                print(f"{'ON' if s.is_on else 'OFF'} | {s.operating.mode.name} | fan {s.operating.speed}% | "
+                print(f"{'ON' if s.is_on else 'OFF'} | {s.operating.mode.name} | fan {s.operating.speed_requested}% | "
                       f"{s.sensors.temperature_celsius}°C | {s.sensors.humidity_percent}%")
                 return
             case "on":
@@ -57,7 +57,7 @@ async def main() -> None:
         print(f"{args.action} {args.value or ''}: sent. Checking in 6 s...".replace("  ", " "))
         await asyncio.sleep(6)
         s = await pico.get_status()
-        print(f"Now: {'ON' if s.is_on else 'OFF'} | {s.operating.mode.name} | fan {s.operating.speed}%")
+        print(f"Now: {'ON' if s.is_on else 'OFF'} | {s.operating.mode.name} | fan {s.operating.speed_requested}%")
 
 
 if __name__ == "__main__":
