@@ -468,6 +468,8 @@ await device.set_target_humidity(TargetHumidityEnum.FIFTY_PERCENT, force=True)
 - `retry` (bool): Enable retry logic
 - `force` (bool): Skip mode validation
 
+> ⚠️ **Note:** Only supported in `HUMIDITY_RECOVERY`, `HUMIDITY_EXTRACTION`, `HUMIDITY_CO2_RECOVERY`, `HUMIDITY_CO2_EXTRACTION`
+
 **Available Levels:**
 - `FORTY_PERCENT` - Target 40% humidity
 - `FIFTY_PERCENT` - Target 50% humidity
@@ -576,6 +578,8 @@ print(f"Air Quality: {sensors.air_quality}")
 print(f"Has Air Quality Sensors: {sensors.has_air_quality}")
 ```
 
+> ⚠️ **Note:** `eco2`, `tvoc` and `air_quality` read 0 on models without the air quality sensor. They also read 0 on models with the sensor until a mode that turns it on is active (e.g. `CO2_RECOVERY`). The device reports both cases the same way, so `has_air_quality` being `False` does not prove the sensor is missing.
+
 ### **OperatingParametersModel**
 
 Current operating state and settings.
@@ -680,6 +684,7 @@ Differences vs local:
 - `bruteforce_idp` raises `NotSupportedError` (no IDP negotiation).
 - The session lasts about 1 h; the client logs in again after 55 min or on HTTP 401.
 - Rejected credentials raise `PicoAuthError`.
+- The Tecnosystemi backend allows one session per account at a time. While the client is logged in, the official app shows an alert and stops working.
 
 Protocol: [`docs/app/http-flows/`](docs/app/http-flows/). Cloud examples: [`examples/cloud/`](examples/cloud/), documented in [`examples/README.md`](examples/README.md).
 
