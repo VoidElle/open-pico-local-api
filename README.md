@@ -21,7 +21,6 @@
 - Automatic IDP synchronization and range allocation
 
 ### 🔄 **Reliability**
-- **Auto-reconnect** on connection failures
 - Configurable retry logic
 - Robust error handling
 - **IDP sync recovery** for resilient communication
@@ -306,7 +305,7 @@ Establishes UDP connection to the Pico device. With shared transport, this regis
 await device.connect()
 ```
 
-**Raises:** `ConnectionError` if connection fails
+**Raises:** `PicoConnectionError` if connection fails
 
 ### **Disconnect from Device**
 
@@ -341,7 +340,7 @@ print(f"IP: {status.device_info.ip}")
 # Operating Status
 print(f"Mode: {status.operating.mode}")
 print(f"Power: {'ON' if status.is_on else 'OFF'}")
-print(f"Fan Speed: {status.operating.speed}%")
+print(f"Fan Speed: {status.operating.speed_requested}%")
 print(f"Night Mode: {status.operating.is_night_mode_active}")
 
 # Sensor Readings
@@ -356,8 +355,10 @@ print(f"Uptime: {status.system.uptime_days:.1f} days")
 print(f"Memory Free: {status.system.memory_free_kb:.1f} KB")
 print(f"Health: {'Healthy' if status.is_healthy else 'Issues Detected'}")
 
-# Feature Support
+# Feature Support (depends on the current mode)
 print(f"Supports Fan Control: {status.support_fan_speed_control}")
+print(f"Supports Humidity Target: {status.support_target_humidity_selection}")
+print(f"Supports Night Mode: {status.support_night_mode_toggle}")
 ```
 
 **Returns:** `PicoDeviceModel` with complete device state
@@ -415,7 +416,9 @@ await device.change_fan_speed(75, force=True)
 **Parameters:**
 - `percentage` (int): Speed from 0-100
 - `retry` (bool): Enable retry logic
-- `force` (bool): Skip mode validation (only supported in `HEAT_RECOVERY`, `EXTRACTION`, `IMMISSION`, `COMFORT_SUMMER`, `COMFORT_WINTER`)
+- `force` (bool): Skip mode validation
+
+> ⚠️ **Note:** Only supported in `HEAT_RECOVERY`, `EXTRACTION`, `IMMISSION`, `COMFORT_SUMMER`, `COMFORT_WINTER`. Without `force`, other modes raise `NotSupportedError`, except `percentage=100`, which is sent in any mode.
 
 ### Night Mode
 
@@ -475,9 +478,18 @@ await device.set_target_humidity(TargetHumidityEnum.FIFTY_PERCENT, force=True)
 - `FIFTY_PERCENT` - Target 50% humidity
 - `SIXTY_PERCENT` - Target 60% humidity
 
-> ⚠️ **Note:** Only supported in humidity-based modes: `HUMIDITY_RECOVERY`, `HUMIDITY_EXTRACTION`, `CO2_RECOVERY`, `CO2_EXTRACTION`
-
 > 🔥 **WARNING:** Using `force=True` bypasses mode compatibility checks and may cause the device to behave unexpectedly or reset its state. Use with caution and only when you understand the implications.
+
+### Filter Maintenance
+
+Clear the filter maintenance flag.
+```python
+status = await device.get_status()
+if status.device_info.needs_clean_filters_maintenance:
+    await device.reset_maintenance()
+```
+
+Reads the current `man` array first, then sends `man_reset` with only index 0 (filter) set, and only if that flag is active. Raises `PicoDeviceError` if the device reports no maintenance data.
 
 ---
 
@@ -518,6 +530,22 @@ This is useful when:
 - Device was power cycled
 - Device firmware was updated
 - Communication became persistently unresponsive
+
+### IDP Bruteforce (Diagnostic)
+
+If the device counter drifted far from the client's range, automatic sync (5 consecutive IDPs) and `reset_idp()` cannot recover it. `bruteforce_idp()` sweeps a range with lightweight `stato_sync` probes and realigns the counter on the first hit:
+```python
+result = await device.bruteforce_idp(start=1, end=500, per_idp_timeout=0.3)
+# {"found": <idp or None>, "responsive_idps": [...], "probed": <count>}
+```
+
+| Parameter | Default | Description |
+|-----------|:-------:|-------------|
+| `start` / `end` | client's IDP range | Range to sweep (`start > end` raises `ValueError`) |
+| `per_idp_timeout` | `0.3` | Seconds to wait per IDP |
+| `stop_on_first` | `True` | Stop at the first responsive IDP |
+
+A full 10,000-wide sweep takes about 50 minutes: keep the range narrow. See [Retry Logic & IDP Sync](docs/retry-logic.md) and `examples/local/idp_diagnostic.py`.
 
 ### IDP Logging
 
@@ -588,7 +616,8 @@ op = status.operating
 
 print(f"Mode: {op.mode}")
 print(f"Is On: {op.is_on}")
-print(f"Fan Speed: {op.speed}%")
+print(f"Fan Speed: {op.speed_requested}%")   # spd_rich: setpoint 0-100, what the app shows
+print(f"Fan Speed Now: {op.speed_row}%")      # spd_row: instantaneous, dips on airflow reversal
 print(f"Fan Running: {op.fan_running}")
 print(f"Night Mode: {op.is_night_mode_active}")
 print(f"LED On: {op.is_led_state_on}")
@@ -640,6 +669,9 @@ The library provides custom exceptions for different scenarios:
 | `PicoTimeoutError` | Operation exceeded timeout duration |
 | `NotSupportedError` | Feature not supported in current operating mode |
 | `PicoDeviceError` | General device-related errors (base class) |
+| `PicoAuthError` | Cloud only: login rejected or token refused. Subclass of `PicoDeviceError`, import from `open_pico_local_api.cloud` |
+
+`ValueError` is raised for invalid arguments: `bruteforce_idp` with `start > end`, or an invalid / IPv6 subnet in `PicoAutoDiscovery.discover`.
 
 **Example:**
 ```python
@@ -679,6 +711,31 @@ async with PicoCloudClient("me@x.com", "password", serial="SER123", pin="1234") 
     plants = await pico.get_plants()
 ```
 
+### Constructor Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|:----:|:-------:|-------------|
+| **`email`** ⭐ | `str` | *required* | Tecnosystemi account email |
+| **`password`** ⭐ | `str` | *required* | Account password (sent AES-encrypted) |
+| `serial` | `str` | `""` | Device serial (upper-cased); needed for device calls |
+| `pin` | `str` | `""` | Device PIN |
+| `name` | `str` | `""` | Device name sent with commands |
+| `device_id` | `str` | random | Stands in for the app's Android ID: AES key seed and login `DeviceId` |
+| `base_url` | `str` | `https://proair.azurewebsites.net` | Backend URL |
+| `timezone` | `str` | `"Europe@Rome"` | Java zone id with `/` replaced by `@` |
+| `timeout` | `float` | `15` | Per-request timeout (seconds) |
+| `retry_attempts` | `int` | `3` | Attempts per call |
+| `retry_delay` | `float` | `2.0` | Delay between attempts (seconds) |
+| `verbose` | `bool` | `False` | Log every HTTP request/response (contains email and PIN) |
+
+### Account Methods
+
+```python
+plants = await pico.get_plants()      # plants with their devices (also stored in pico.plants)
+devices = await pico.get_devices()    # flat device list, each with "PlantName"
+pico.use_device("SER456", "5678")     # point the same session at another device
+```
+
 Differences vs local:
 - Commands return only a cloud ack; the device applies them asynchronously. Poll `get_status()` to see the result.
 - `bruteforce_idp` raises `NotSupportedError` (no IDP negotiation).
@@ -702,7 +759,7 @@ Detailed documentation of the internal flows and architecture lives in [`docs/`]
 | [Connection Lifecycle](docs/connection-lifecycle.md) | `connect()` / `disconnect()` flow; `auto_reconnect` decorator; `SharedTransportManager.shutdown()` |
 | [Auto-Discovery Flow](docs/auto-discovery.md) | Subnet probe; concurrent probe+collect; response validation; relation to registered devices |
 | [App Local Flows](docs/app/local-flows/) | UDP/TCP flows of the official app (decompiled): transport, runtime commands, provisioning, firmware OTA |
-| [App vs Library Diff](docs/app/local-flows/diff-app-api.md) | Mismatches between the official app's behaviour and this library (in Italian) |
+| [App vs Library Diff](docs/app/local-flows/diff-app-api.md) | Mismatches between the official app's behaviour and this library |
 | [App Cloud HTTP Flows](docs/app/http-flows/) | Protocol of the official app's cloud backend, used by `PicoCloudClient` |
 
 ---
@@ -778,9 +835,9 @@ open-pico-local-api/
 │   │   ├── parameter_arrays_model.py
 │   │   └── system_info_model.py       # System diagnostics
 │   ├── utils/
-│   │   ├── auto_reconnect.py          # Auto-reconnect decorator
+│   │   ├── auto_reconnect.py          # Opt-in reconnect decorator (not used by PicoClient)
 │   │   ├── constants.py               # Mode constants
-│   │   └── pico_protocol.py           # Base UDP protocol
+│   │   └── pico_protocol.py           # Unused; the transport uses SharedPicoProtocol
 │   ├── cloud/
 │   │   ├── __init__.py                # Exports PicoCloudClient, PicoAuthError
 │   │   ├── pico_cloud_client.py       # HTTPS transport, subclass of PicoClient

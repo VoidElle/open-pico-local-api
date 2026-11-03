@@ -52,7 +52,7 @@ async def main() -> None:
 
                 print(f"[{now}]  {health}  {power}")
                 print(f"  Mode    : {status.operating.mode.name}")
-                print(f"  Fan     : {status.operating.speed}%")
+                print(f"  Fan     : {status.operating.speed_requested}%")
                 print(f"  Temp    : {status.sensors.temperature_celsius}°C")
                 print(f"  Humidity: {status.sensors.humidity_percent}%")
                 print(f"  CO₂     : {status.sensors.eco2} ppm")

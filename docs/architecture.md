@@ -2,9 +2,10 @@
 
 ## The Port Constraint
 
-Pico devices are hardcoded by the manufacturer to **only respond to packets originating from port 40069**.
-This means you cannot open a dedicated UDP socket per device - the OS allows only one process to bind a
-given port at a time. A naive one-socket-per-device approach would fail on the second device.
+Pico devices always **send their replies to UDP port 40069**, whatever the source port of the request
+(confirmed on hardware, see [app diff #4](app/local-flows/diff-app-api.md)). So the client must listen on
+40069, and the OS allows only one socket to bind a given port at a time. A naive one-socket-per-device
+approach would fail on the second device.
 
 ## Solution: One Socket, Many Devices
 

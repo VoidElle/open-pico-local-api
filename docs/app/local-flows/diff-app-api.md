@@ -1,203 +1,203 @@
-# Report: disallineamenti app Tecnosystemi (PICO) vs `open_pico_local_api`
+# Report: Tecnosystemi app (PICO) vs `open_pico_local_api` mismatches
 
-Data: 2026-10-26. Confronto tra `` (flussi ricavati dall'app decompilata) e implementazione (`../../../open_pico_local_api`, `examples/`, `README.md`, `docs/*.md`).
+Date: 2026-10-26. Compares the flows extracted from the decompiled app (the other files in this folder) with the implementation (`../../../open_pico_local_api`, `examples/`, `README.md`, `docs/*.md`).
 
-Scope: solo configurazione singola (no master/slave).
+Scope: single-device setup only (no master/slave).
 
-Metodo: 4 agenti di confronto (trasporto, runtime, provisioning, firmware) + 4 verificatori avversariali. Riportati solo finding `confirmed` o `partial` (con correzione del verificatore); 1 refutato, scartato. Finding duplicati tra aree accorpati.
+Method: 4 comparison agents (transport, runtime, provisioning, firmware) + 4 adversarial verifiers. Only `confirmed` or `partial` findings are reported (with the verifier's correction); 1 refuted finding was dropped. Duplicate findings across areas were merged.
 
-> **Verifica lato app:** la prima analisi è stata fatta sugli snippet in ``, perché i sorgenti erano temporaneamente assenti. Una seconda passata, mirata e sul sorgente ripristinato, ha confermato:
+> **App-side verification:** the first analysis used the snippets in this folder, because the sources were temporarily unavailable. A second, targeted pass on the restored source confirmed:
 > - #1, #5, #6, #7, #8, #9: `Commands/UDPSocket.java:56-176, 228-325`
 > - #10-#13: `Model/Pico.java:409-437`
 > - #14: `CmdPICO.java:160-173`, `PicoActivity.java:1488`
 > - #3: `PicoActivity.java:568-575`
-> - #2 con una correzione (vedi sotto)
+> - #2 with a correction (see below)
 > - OTA, 1300 B / 20 ms / `ota_end` / `ap_m:5`: `PicoBootloaderActivity.java:315-341`
-> - soglia 1.0.3: `PicoBootloaderActivity.java:351`, `CheckLedPICOActivity.java:112`
+> - 1.0.3 threshold: `PicoBootloaderActivity.java:351`, `CheckLedPICOActivity.java:112`
 >
-> Una terza passata (2 agenti Sonnet) ha verificato sul sorgente reale tutti i punti restanti, da #4 a #27. Le correzioni sono integrate nei rispettivi punti: #4, #17 (`timezone`), #20/#23, #24 (`upd_datetime`), #27. Il lato lib è verificato sul codice.
+> A third pass (2 Sonnet agents) checked every remaining point, #4 to #27, against the real source. The corrections are merged into each point: #4, #17 (`timezone`), #20/#23, #24 (`upd_datetime`), #27. The library side is verified against the code.
 
-Fatto confermato sul campo: il PICO risponde sempre a UDP 40069, qualunque sia la porta sorgente.
+Confirmed in the field: the PICO always replies to UDP 40069, whatever the source port.
 
-## Sintesi
+## Summary
 
-| # | Sev. | Tipo | Titolo |
-|---|------|------|--------|
-| 1 | medium | wire | Retry: fino a 15 invii, anche dopo ACK (app: max 3, mai dopo ACK) |
-| 2 | medium | parsing | `res` mai controllato: errore/PIN errato riportato come successo |
-| 3 | medium | parsing | `err` con array a zero → `has_errors=True` permanente |
-| 4 | medium | lib-doc | Regola porta di risposta descritta al contrario; `local_port` presentato come configurabile |
-| 5 | low | wire | ACK device riconosciuto solo con `frm=="mst"`; attesa post-ACK fissa 2 s |
-| 6 | low | wire | ACK client inviato solo per idp atteso (app: ACK a ogni messaggio con `res != 99`) |
-| 7 | low | wire | Messaggio senza `res` con idp atteso trattato come risposta e ACK-ato |
-| 8 | low | wire | idp a range per device (1, 10001, 20001…); modello "idp sincronizzato" non supportato dall'app |
-| 9 | low | wire | Ordine campi envelope / spazi JSON / `pin: null` diversi da Gson |
-| 10 | low | parsing | `mod` assente/sconosciuto → `HEAT_RECOVERY` |
-| 11 | low | parsing | `on_off`: lib OFF se `!= 1`, app OFF solo se `== 2` |
-| 12 | low | parsing | `s_umd` assente → 50% inventato; alias `umd` ignorato |
-| 13 | low | parsing | LED: letto solo `led_on_off`; app usa anche `led`, `led_on_off_breve` |
-| 14 | - | - | rimosso: fuori scope |
-| 15 | low | semantica | `speed` documentato come %; la percentuale è `spd_rich`/`spd_row` |
-| 16 | low | validazione | Setter senza range check (`mod`, `spd_row`, `s_umd`, `vr`) |
-| 17 | low | semantica | `par_amb`/`par_ext`, `m_crono`, `vr`, `timezone` grezzi |
-| 18 | low | robustezza | Listener mai ricreato dopo errore socket |
-| 19 | low | robustezza | `register_device` con `device_id` esistente ignora nuovo ip/port |
-| 20 | low | discovery | Discovery LAN con `idp=0`, senza ACK, richiede PIN |
-| 21 | low | lib-doc | Docs idp: "device mantiene contatore" presentato come fatto; "releases IDP range" falso |
-| 22 | low | lib-doc | `../../command-flow.md`: risposta post-comando = stato completo (non verificato) |
-| 23 | low | lib-doc | Uso LAN / porte fisse presentati come standard; app usa solo `192.168.4.1` |
-| 24 | low | gap | Comandi mancanti: `check_pin`, `upd_datetime`, `get/set_fasce`, `m_crono`, `pico_info` |
-| 25 | low | gap | Nessun provisioning, OTA, gestione PIN `null`/`"-1"` |
-| 26 | low | dead code | `utils/pico_protocol.py` duplicato inutilizzato |
-| 27 | low | doc-app | `02-pico-runtime.md` incoerente su `spd_row` |
+| # | Sev. | Type | Title |
+|---|------|------|-------|
+| 1 | medium | wire | Retry: up to 15 sends, even after an ACK (app: max 3, never after an ACK) |
+| 2 | medium | parsing | `res` never checked: error / wrong PIN reported as success |
+| 3 | medium | parsing | `err` with all-zero arrays → `has_errors=True` forever |
+| 4 | medium | lib-doc | `local_port` presented as configurable with no warning (port rule in `architecture.md` fixed) |
+| 5 | low | wire | Device ACK recognised only with `frm=="mst"`; fixed 2 s wait after the ACK |
+| 6 | low | wire | Client ACK sent only for the expected idp (app: ACK for every message with `res != 99`) |
+| 7 | low | wire | Message without `res` and with the expected idp treated as the reply and ACKed |
+| 8 | low | wire | Per-device idp ranges (1, 10001, 20001…); the "synchronised idp" model is not backed by the app |
+| 9 | low | wire | Envelope field order / JSON spaces / `pin: null` differ from Gson |
+| 10 | low | parsing | Missing/unknown `mod` → `HEAT_RECOVERY` |
+| 11 | low | parsing | `on_off`: lib OFF if `!= 1`, app OFF only if `== 2` |
+| 12 | low | parsing | Missing `s_umd` → made-up 50%; `umd` alias ignored |
+| 13 | low | parsing | LED: only `led_on_off_breve` read; no fallback to `led`/`led_on_off` |
+| 14 | - | - | removed: out of scope |
+| 15 | low | semantics | Docs now use `speed_requested`; `fan_running` still based on legacy `speed` |
+| 16 | low | validation | Setters without range checks (`mod`, `spd_row`, `s_umd`, `vr`) |
+| 17 | low | semantics | `par_amb`/`par_ext`, `m_crono`, `vr`, `timezone` left raw |
+| 18 | low | robustness | Listener never recreated after a socket error |
+| 19 | low | robustness | `register_device` with an existing `device_id` ignores the new ip/port |
+| 20 | low | discovery | LAN discovery with `idp=0`, no ACK, needs the PIN |
+| 21 | low | lib-doc | idp docs: "device keeps a counter" stated as fact; "releases IDP range" is false |
+| 22 | low | lib-doc | `../../command-flow.md`: reply after a command = full state (not verified) |
+| 23 | low | lib-doc | LAN use / fixed ports presented as standard; the app only uses `192.168.4.1` |
+| 24 | low | gap | Missing commands: `check_pin`, `upd_datetime`, `get/set_fasce`, `m_crono`, `pico_info` |
+| 25 | low | gap | No provisioning, OTA, or handling of `null`/`"-1"` PIN |
+| 26 | low | dead code | `utils/pico_protocol.py` duplicate, unused |
+| 27 | low | doc-app | `02-pico-runtime.md` inconsistent about `spd_row` |
 
 ---
 
-## 1. Retry: fino a 15 invii, anche dopo ACK — medium
+## 1. Retry: up to 15 sends, even after an ACK — medium
 
-- **App** (`01-transport.md` §4-5, `UDPSocket.java:284-311`): 3 tentativi, idp nuovo ciascuno; ritenta solo se nessun ACK entro 5 s. Ricevuto ACK, attende la risposta (5 s dall'invio) e non ritenta.
-- **Lib** (`pico_client.py:494-536`, `:545`, `:553-558`): `retry_attempts=3` × `max_idp_sync=5` = fino a 15 invii, idp nuovo ciascuno. Dopo ACK attende solo 2.0 s fissi, poi reinvia lo stesso comando. Con `retry=False` invia comunque fino a 5 pacchetti.
-- **Impatto:** comando non idempotente (`upd_pico`, `man_reset`) già eseguito può essere reinviato fino a 14 volte. Caso peggiore ~79 s contro ~16 s dell'app.
-- **Fix:** se c'è ACK, attendi la risposta fino a `timeout` senza reinviare. Massimo 3 invii. `retry=False` = 1 invio. Sweep idp solo opt-in.
+- **App** (`01-transport.md` §4-5, `UDPSocket.java:284-311`): 3 attempts, a new idp each; retries only if no ACK arrives within 5 s. Once ACKed, it waits for the reply (5 s from the send) and does not retry.
+- **Lib** (`pico_client.py:494-536`, `:545`, `:553-558`): `retry_attempts=3` × `max_idp_sync=5` = up to 15 sends, a new idp each. After an ACK it waits only a fixed 2.0 s, then sends the same command again. With `retry=False` it still sends up to 5 packets.
+- **Impact:** a non-idempotent command (`upd_pico`, `man_reset`) that was already applied can be sent up to 14 more times. Worst case ~79 s against ~16 s for the app.
+- **Fix:** after an ACK, wait for the reply up to `timeout` without resending. At most 3 sends. `retry=False` = 1 send. Idp sweep opt-in only.
 
-## 2. `res` mai controllato — medium (partial)
+## 2. `res` never checked — medium (partial)
 
-- **App** (`PicoActivity.checkRespSetMode`, `:1593-1603`; uso in `sendCmdUpdPico` `:1555-1564` e `sendCmdDataOraTImezone` `:1525-1539`): un comando è OK solo con `res==1`, e solo allora viene applicato lo stato ottimistico (`pico = tmpPico.getCopy()`). Con `res != 1` o `null` l'app scarta in silenzio la modifica, senza toast. `check_pin` richiede anch'esso `res==1`; altrimenti dialog PIN.
-- **Lib** (`pico_client.py:574-580`): qualunque risposta con `res != 99` e idp corretto viene restituita. `CommandResponseModel` non ha `res`. `get_status` costruisce `PicoDeviceModel` senza verifica (`pico_device_model.py:144` default `res=0`).
-- **Impatto:** PIN errato o errore device risultano successo; una risposta d'errore parsata come stato produce default inventati.
-- **Fix:** esporre `res`; `PicoDeviceError` se `res != 1`; `get_status` richiede `res==1`.
+- **App** (`PicoActivity.checkRespSetMode`, `:1593-1603`; used in `sendCmdUpdPico` `:1555-1564` and `sendCmdDataOraTImezone` `:1525-1539`): a command is OK only with `res==1`, and only then is the optimistic state applied (`pico = tmpPico.getCopy()`). With `res != 1` or `null` the app silently drops the change, with no toast. `check_pin` also requires `res==1`; otherwise it shows the PIN dialog.
+- **Lib** (`pico_client.py:574-580`): any reply with `res != 99` and the right idp is returned. `CommandResponseModel` has no `res`. `get_status` builds `PicoDeviceModel` without checking it (`pico_device_model.py:144` default `res=0`).
+- **Impact:** a wrong PIN or a device error looks like success; an error reply parsed as state produces made-up defaults.
+- **Fix:** expose `res`; raise `PicoDeviceError` if `res != 1`; `get_status` requires `res==1`.
 
-## 3. `err` con array a zero → errore permanente — medium
+## 3. `err` with all-zero arrays → permanent error — medium
 
-- **App** (`02-pico-runtime.md` §3.1-3.2): `err` è `int[][]` per unità. Icona d'errore solo se un elemento è `!= 0`. Codice = `categoria*1000 + maschera 8 bit`. `10004` è un watchdog sintetico.
-- **Lib** (`models/parameter_arrays_model.py:17-26`): `has_errors = any(len(l) > 0)`; `active_errors` include gli zeri. Da qui dipende `is_healthy` (`pico_device_model.py:158-164`).
-- **Fix:** filtrare `e != 0`; opzionalmente decodificare categoria e maschera.
-- **Da verificare sul device:** se invii davvero array a zero.
+- **App** (`02-pico-runtime.md` §3.1-3.2): `err` is `int[][]`, one array per unit. The error icon shows only if an element is `!= 0`. Code = `category*1000 + 8-bit mask`. `10004` is a synthetic watchdog.
+- **Lib** (`models/parameter_arrays_model.py:17-26`): `has_errors = any(len(l) > 0)`; `active_errors` includes the zeros. `is_healthy` depends on it (`pico_device_model.py:158-164`).
+- **Fix:** filter `e != 0`; optionally decode category and mask.
+- **To check on the device:** whether it really sends all-zero arrays.
 
-## 4. Regola porta di risposta descritta al contrario — medium
+## 4. Reply port rule described backwards — medium
 
-- **Fatto:** il device risponde sempre a 40069. L'app invia da una porta effimera e ascolta su 40069.
-- **App** (`UDPSocket.java:41,91`: listener su 40069; `:262,340`: invio da `new DatagramSocket()` effimero).
-- **Lib docs:** solo `docs/architecture.md:5` inverte la regola ("only respond to packets originating from port 40069"). `README.md:240` ("reply only to that port") e `pico_auto_discovery.py:6-7,47-48` sono corretti, al più ambigui. `local_port` è un parametro configurabile con default 40069 (`README.md:176,262`, `docs/auto-discovery.md:89`), senza avvertenza che deve restare 40069.
-- **Impatto:** con `local_port != 40069` tutti i comandi vanno in timeout. La motivazione del socket condiviso è sbagliata, anche se il design resta valido: un solo listener deve possedere 40069.
-- **Fix:** riformulare; `local_port` "deve restare 40069" oppure rimuoverlo.
+- **Fact:** the device always replies to 40069. The app sends from an ephemeral port and listens on 40069.
+- **App** (`UDPSocket.java:41,91`: listener on 40069; `:262,340`: sends from an ephemeral `new DatagramSocket()`).
+- **Lib docs:** `docs/architecture.md` used to say the opposite ("only respond to packets originating from port 40069"); fixed. `README.md:247` ("reply only to that port") and `pico_auto_discovery.py:6-7,47-48` are correct, at most ambiguous. `local_port` is a configurable parameter with default 40069 (`README.md:183,269`, `docs/auto-discovery.md:89`), with no warning that it must stay 40069.
+- **Impact:** with `local_port != 40069` every command times out. The stated reason for the shared socket was wrong, although the design is still valid: a single listener must own 40069.
+- **Fix:** document that `local_port` "must stay 40069", or remove it.
 
-## 5. ACK device solo con `frm=="mst"`; attesa post-ACK 2 s — low
+## 5. Device ACK only with `frm=="mst"`; 2 s wait after the ACK — low
 
-- **App:** ACK = `res==99` con idp atteso, nessun controllo su `frm`. L'attesa della risposta segue il timeout del comando (10-15 s per `pico_info`/`config`).
-- **Lib** (`pico_client.py:568`, `:545`): richiede `frm=="mst"`; altrimenti l'ACK viene scartato in silenzio. `ack_timeout=2.0` fisso. `docs/command-flow.md:23-70` fissa `frm=mst` come regola di protocollo.
-- **Fix:** accettare ACK a prescindere da `frm`; attesa post-ACK = timeout del comando.
+- **App:** ACK = `res==99` with the expected idp, no check on `frm`. The wait for the reply follows the command timeout (10-15 s for `pico_info`/`config`).
+- **Lib** (`pico_client.py:568`, `:545`): requires `frm=="mst"`; otherwise the ACK is silently dropped. `ack_timeout=2.0` is fixed. `docs/command-flow.md:23-70` states `frm=mst` as a protocol rule.
+- **Fix:** accept the ACK whatever `frm` is; wait after the ACK = command timeout.
 
-## 6. ACK client solo per idp atteso — low
+## 6. Client ACK only for the expected idp — low
 
-- **App** (`UDPSocket.parsemsg`, `01-transport.md` §4): invia `{idp, frm:"app", res:99}` per ogni messaggio con `res != 99`, incluse risposte tardive, idp sconosciuti e push. Richiede anche `cmd`; senza, l'eccezione viene solo loggata.
-- **Lib:** `pico_client.py:565-566` scarta gli altri idp senza ACK. `shared_transport_manager.py:70-75` li instrada/scarta senza ACK. Discovery: nessun ACK.
-- **Impatto ipotetico:** se il firmware ritrasmette fino all'ACK → traffico spurio. Possibile legame con i sintomi "idp bloccato" (non verificato).
-- **Fix:** ACK centralizzato in `SharedPicoProtocol.datagram_received` per ogni messaggio con `idp`, `res != 99` e `cmd`.
+- **App** (`UDPSocket.parsemsg`, `01-transport.md` §4): sends `{idp, frm:"app", res:99}` for every message with `res != 99`, including late replies, unknown idps and pushes. It also requires `cmd`; without it, the exception is only logged.
+- **Lib:** `pico_client.py:565-566` drops other idps without an ACK. `shared_transport_manager.py:70-75` routes/drops them without an ACK. Discovery: no ACK.
+- **Possible impact:** if the firmware retransmits until it gets an ACK → spurious traffic. Possibly linked to the "stuck idp" symptoms (not verified).
+- **Fix:** central ACK in `SharedPicoProtocol.datagram_received` for every message with `idp`, `res != 99` and `cmd`.
 
-## 7. Messaggio senza `res` trattato come risposta — low
+## 7. Message without `res` treated as the reply — low
 
-- **Lib** (`pico_client.py:574`): `response.get("res") != 99` è vero anche se `res` manca → restituito e ACK-ato.
-- **App:** `getLong("res")` lancia → ignorato, nessun ACK.
-- **Fix:** richiedere `"res" in response`.
+- **Lib** (`pico_client.py:574`): `response.get("res") != 99` is true even when `res` is missing → returned and ACKed.
+- **App:** `getLong("res")` throws → ignored, no ACK.
+- **Fix:** require `"res" in response`.
 
-## 8. idp a range per device — low (partial)
+## 8. Per-device idp ranges — low (partial)
 
-- **App:** contatore globale, parte da 1, `resetIDP()` a ogni riconnessione, idp nuovo per retry, nessuna sincronizzazione.
-- **Lib** (`shared_transport_manager.py:136-137,221-222`, `pico_client.py:121,451`): range da 10000 per device. Il primo device parte da 1, gli altri da 10001, 20001… Wrap a `range_start`.
-- **Nota:** è un problema solo se il firmware traccia davvero l'idp (vedi #21). Da verificare su hardware; in caso affermativo usare idp per device da 1 e demultiplexare per IP sorgente.
+- **App:** global counter, starts at 1, `resetIDP()` on every reconnection, a new idp per retry, no synchronisation.
+- **Lib** (`shared_transport_manager.py:136-137,221-222`, `pico_client.py:121,451`): 10000-wide range per device. The first device starts at 1, the others at 10001, 20001… Wraps to `range_start`.
+- **Note:** this is a problem only if the firmware really tracks the idp (see #21). To be checked on hardware; if it does, use per-device idps from 1 and demultiplex by source IP.
 
-## 9. Formato envelope — low
+## 9. Envelope format — low
 
-- **App (Gson):** `{"cmd":…,"frm":"app","idp":N,"pin":"…"}`, compatto, `pin` null omesso.
-- **Lib** (`pico_client.py:160-164,516,467`): ordine `cmd, frm, pin, idp`, separatori con spazi, `"pin": null` inviato.
-- **Impatto:** nessuno con un parser JSON reale. Allineare (`separators=(',',':')`, idp prima di pin, omettere None) solo se emergono firmware con parser rigidi.
+- **App (Gson):** `{"cmd":…,"frm":"app","idp":N,"pin":"…"}`, compact, a null `pin` is omitted.
+- **Lib** (`pico_client.py:160-164,516,467`): order `cmd, frm, pin, idp`, separators with spaces, `"pin": null` sent.
+- **Impact:** none with a real JSON parser. Align (`separators=(',',':')`, idp before pin, omit None) only if firmware with strict parsers shows up.
 
-## 10-13. Parsing stato — low
+## 10-13. State parsing — low
 
-| Campo | App (`02-pico-runtime.md` §3.1) | Lib | Fix |
+| Field | App (`02-pico-runtime.md` §3.1) | Lib | Fix |
 |---|---|---|---|
-| `mod` | aggiornato solo se presente; fuori 1..12 = nessun modo | `pico_device_model.py:75-78` default 1 → `HEAT_RECOVERY`, abilita guard speed/night | valore grezzo + `UNKNOWN`/`None` |
-| `on_off` | OFF solo se `==2`; chiave assente = valore precedente | `:81-84` default 0 → OFF | `is_off = on_off == 2` |
-| `s_umd` | da `umd` poi `s_umd` (vince `s_umd`), solo se presente | `:87-90` assente → warning + 50% | `Optional`, fallback `umd` |
-| LED | `led_on_off` → `led` → `led_on_off_breve`, vince l'ultimo | `operating_parameters_model.py:45-47` solo `led_on_off` | property con stessa precedenza |
+| `mod` | updated only if present; outside 1..12 = no mode | `pico_device_model.py:75-78` default 1 → `HEAT_RECOVERY`, enables the speed/night guards | raw value + `UNKNOWN`/`None` |
+| `on_off` | OFF only if `==2`; missing key = previous value | `:81-84` default 0 → OFF | `is_off = on_off == 2` |
+| `s_umd` | from `umd` then `s_umd` (`s_umd` wins), only if present | `:87-90` missing → warning + 50% | `Optional`, fall back to `umd` |
+| LED | `led_on_off` → `led` → `led_on_off_breve`, last one wins | `operating_parameters_model.py:45-47` only `led_on_off_breve` (`!= 2`): matches the app when `led_on_off_breve` is present | fall back to `led`/`led_on_off` when it is missing |
 
-## 14. Manutenzione `man[]` — rimosso: fuori scope
+## 14. Maintenance `man[]` — removed: out of scope
 
-- Rimosso: fuori scope. L'app tratta `man[0]` come il PICO; gli altri indici appartengono alla cascata. La lib usa solo l'indice 0 (`pico_client.py:310-312`): allineata.
+- Removed: out of scope. The app treats `man[0]` as the PICO; the other indexes belong to the cascade. The lib uses only index 0 (`pico_client.py:310-312`): aligned.
 
-## 15. `speed` presentato come % — low (partial)
+## 15. `speed` presented as % — low (partial)
 
-- **App:** percentuale = `spd_rich` (richiesta) / `spd_row` (0..100). `speed` è un valore legacy (1..3, inferred). Il comando invia `speed:0` + `spd_row`.
-- **Lib:** `README.md:336,579` e `examples/*` stampano `Fan Speed: {speed}%`. `fan_running = speed > 0` (`operating_parameters_model.py:36-38`). Dopo `change_fan_speed` (`speed:0`) il valore mostrato non riflette quanto impostato.
-- **Fix:** documentare `speed_requested`/`speed_row` come percentuale; rivedere `fan_running`.
+- **App:** percentage = `spd_rich` (requested) / `spd_row` (0..100). `speed` is a legacy value (1..3, inferred). The command sends `speed:0` + `spd_row`.
+- **Lib:** the model exposes `speed_requested` (`spd_rich`) and `speed_row` (`spd_row`); `README.md` and `examples/*` now print `speed_requested` as the percentage. Still open: `fan_running = speed > 0` (`operating_parameters_model.py:36-38`) still uses the legacy value.
+- **Fix:** revisit `fan_running` (e.g. `speed_row > 0`).
 
-## 16. Nessuna validazione nei setter — low (partial)
+## 16. No validation in setters — low (partial)
 
-`change_operating_mode` (`pico_client.py:188-196`), `change_fan_speed` (`:203-220`) e `set_target_humidity` (`:278-283`) inviano qualunque int. L'app limita `mod` 1..12 (6..11 nascosti con `vr==1`), `spd_row` 0..100, `s_umd` 1..3. Inoltre `change_fan_speed` non blocca la modalità notte (l'app disabilita lo slider) e salta il guard di modo con `percentage==100`.
+`change_operating_mode` (`pico_client.py:188-196`), `change_fan_speed` (`:203-220`) and `set_target_humidity` (`:278-283`) send any int. The app limits `mod` to 1..12 (6..11 hidden with `vr==1`), `spd_row` to 0..100, `s_umd` to 1..3. Also, `change_fan_speed` does not block night mode (the app disables the slider) and skips the mode guard when `percentage==100`.
 
-## 17. Campi grezzi senza semantica — low
+## 17. Raw fields without semantics — low
 
-- **Sensori:** `par_amb`/`par_ext` passati come liste. App: `[1]` umidità /100, `[2]` indice qualità (soglie 200/400), `[3]` CO2 /100 valido solo nel range 30000..300000 grezzo, `-999` = non disponibile.
-- **Temperature:** `AMB_tmpr`/`EXT_tmpr` non parsati.
-- **Altri campi:** `m_crono` (1 = on, **2 = off**: un consumer che lo tratta come booleano sbaglia), `vr` (1 nasconde i modi 6..11, 3 abilita fasce e data), `timezone` (stringa; `"null"` trattato come null, chiave assente = `""`, `Pico.java:67-71`), `week` (0 = lunedì) non documentati.
+- **Sensors:** `par_amb`/`par_ext` passed through as lists. App: `[1]` humidity /100, `[2]` quality index (thresholds 200/400), `[3]` CO2 /100, valid only in the raw range 30000..300000, `-999` = not available.
+- **Temperatures:** `AMB_tmpr`/`EXT_tmpr` not parsed.
+- **Other fields:** `m_crono` (1 = on, **2 = off**: a consumer treating it as a boolean gets it wrong), `vr` (1 hides modes 6..11, 3 enables time slots and date), `timezone` (string; `"null"` treated as null, missing key = `""`, `Pico.java:67-71`), `week` (0 = Monday) are not documented.
 
-## 18. Listener mai ricreato — low
+## 18. Listener never recreated — low
 
-`shared_transport_manager.py:98-104` si limita a loggare `error_received`/`connection_lost`; `_initialized` resta True (`:163-166`). Nessun rebind di 40069 finché non viene chiamato `shutdown()`. L'app invece ricrea il listener a ogni retry e riconnessione.
+`shared_transport_manager.py:98-104` only logs `error_received`/`connection_lost`; `_initialized` stays True (`:163-166`). 40069 is never rebound until `shutdown()` is called. The app instead recreates the listener on every retry and reconnection.
 
-## 19. `register_device` con id esistente — low (partial)
+## 19. `register_device` with an existing id — low (partial)
 
-`shared_transport_manager.py:210-218` aggiorna solo coda e callback, ignorando un nuovo ip/port. Riguarda solo chi riusa un `device_id` esplicito senza `disconnect()`, o due client vivi con lo stesso id. Il caso default (`ip:port`) non è toccato.
+`shared_transport_manager.py:210-218` only updates the queue and callbacks, ignoring a new ip/port. It affects only callers that reuse an explicit `device_id` without `disconnect()`, or two live clients with the same id. The default case (`ip:port`) is unaffected.
 
 ## 20. Discovery — low
 
-`pico_auto_discovery.py`: scan della subnet con `stato_sync`, `idp=0` (l'app parte da 1), PIN obbligatorio, nessun ACK alle risposte. L'app non ha discovery. L'app usa sempre `192.168.4.1` (`UDPSocket.java:61-62`). Device con PIN diverso o non configurati non vengono trovati. Alternativa senza PIN: `pico_info` (restituisce `ser`, `fw_ver`, `config_mod`).
+`pico_auto_discovery.py`: subnet scan with `stato_sync`, `idp=0` (the app starts at 1), PIN required, no ACK to replies. The app has no discovery and always uses `192.168.4.1` (`UDPSocket.java:61-62`). Devices with a different PIN or not yet configured are not found. PIN-less alternative: `pico_info` (returns `ser`, `fw_ver`, `config_mod`).
 
-## 21-23. Documentazione lib — low
+## 21-23. Library documentation — low
 
-- **#21** `docs/retry-logic.md:3-30` e `README.md:480` presentano come fatto "il device mantiene un contatore idp che deve combaciare". L'app evidenzia il contrario: reset a 1, idp nuovo per retry, nessuna sincronizzazione. Va marcato come workaround osservato e non verificato. `reset_idp` torna a `range_start`, non a 1 (`retry-logic.md:70-74`). `README.md:305` "releases IDP range" è falso: `_next_idp_range` cresce soltanto (corretto in `architecture.md:96`).
-- **#22** `docs/command-flow.md:10-28`: risposta post-comando = stato aggiornato completo. Nell'app è una domanda aperta; l'app considera solo `res==1`.
-- **#23** `README.md:78,106-113,208-233` e `docs/architecture.md:32` presentano l'IP LAN come caso normale. L'app usa `192.168.4.1` (AP device) e il cloud in STA. L'uso LAN va documentato come estensione empirica. Assenti in README: AP default `192.168.4.1`, SSID `Pico_config`/`12345678`, `Pico_<SER>`/`TS_<SER>`.
+- **#21** `docs/retry-logic.md:3-30` and `README.md:502` state as fact that "the device keeps an idp counter that must match". The app shows the opposite: reset to 1, a new idp per retry, no synchronisation. It should be marked as an observed, unverified workaround. `reset_idp` goes back to `range_start`, not to 1 (`retry-logic.md:97-98`). `README.md:312` "releases IDP range" is false: `_next_idp_range` only grows (stated correctly in `architecture.md:91-92`).
+- **#22** `docs/command-flow.md:10-28`: reply after a command = full updated state. In the app this is an open question; the app only looks at `res==1`.
+- **#23** `README.md:77-145,192-242` and `docs/architecture.md:33` present the LAN IP as the normal case. The app uses `192.168.4.1` (device AP) and the cloud in STA mode. LAN use should be documented as an empirical extension. Missing from the README: default AP `192.168.4.1`, SSID `Pico_config`/`12345678`, `Pico_<SER>`/`TS_<SER>`.
 
-## 24-25. Funzionalità mancanti — low (gap, nessun valore errato inviato)
+## 24-25. Missing features — low (gap, no wrong value sent)
 
-- **Comandi runtime:**
-  - `check_pin` (`res==1` = PIN valido)
-  - `upd_datetime` (`date yyyy-MM-dd`, `time HH:mm:00`, `week` 0 = lun; `PicoActivity.java:1879-1882`). Bug app: `PICOCronoSummaryActivity.java:113-117` invia `hh:mm:ss` (formato 12h); nessuno dei due percorsi imposta il pin.
-  - `get_fasce`/`set_fasce` (D0..D6, 4 slot `[start_min,end_min,mod,speed,hum]`, slot vuoto `[-1,-1,0,0,0]`)
-  - `upd_pico` con `m_crono` 1/2
-- **Info:** `pico_info` senza pin; `ser` mai parsato (`device_info_model.py`).
+- **Runtime commands:**
+  - `check_pin` (`res==1` = valid PIN)
+  - `upd_datetime` (`date yyyy-MM-dd`, `time HH:mm:00`, `week` 0 = Mon; `PicoActivity.java:1879-1882`). App bug: `PICOCronoSummaryActivity.java:113-117` sends `hh:mm:ss` (12-hour format); neither path sets the pin.
+  - `get_fasce`/`set_fasce` (D0..D6, 4 slots `[start_min,end_min,mod,speed,hum]`, empty slot `[-1,-1,0,0,0]`)
+  - `upd_pico` with `m_crono` 1/2
+- **Info:** `pico_info` without pin; `ser` never parsed (`device_info_model.py`).
 - **Provisioning:** `check_led`, `scan_wifi`, `config`, `pico_ap` (`pin:"-1"`, `ap_m`).
-- **OTA:** `ota_start{sha256,size}` → TCP `192.168.4.1:40060` a chunk da 1300 B con pausa di 20 ms → `ota_end` → `pico_ap{ap_m:5}`.
-- **PIN:** sempre serializzato; nessun supporto a `None` (omesso) né validazione (l'app richiede 4 caratteri convertibili in int).
-- **Versioni:** nessun helper di confronto numerico (soglia 1.0.3 usata dall'app).
+- **OTA:** `ota_start{sha256,size}` → TCP `192.168.4.1:40060` in 1300 B chunks with a 20 ms pause → `ota_end` → `pico_ap{ap_m:5}`.
+- **PIN:** always serialised; no support for `None` (omitted) and no validation (the app requires 4 characters that parse as an int).
+- **Versions:** no numeric comparison helper (the app uses a 1.0.3 threshold).
 
 ## 26. Dead code — low
 
-`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (coda singola, senza routing per idp) usato solo da `tests/local/test_pico_protocol.py`. Rimuovere o deprecare.
+`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (single queue, no idp routing) is used only by `tests/local/test_pico_protocol.py`. Remove or deprecate.
 
-## 27. Incoerenze in `` — low
+## 27. Inconsistencies in the app docs — low
 
-- `02-pico-runtime.md`: `:267-268,291` mappano `spd_row` su `Pico.speed_raw`, ma `:306` lo dice "solo debug, non entra in Pico". Il codice lo legge in `Pico` (`Pico.java:418-419`) e lo usa anche fuori dal pannello debug (`PicoActivity.java:1225,1467`). Togliere `spd_row` dalla lista a `:306`.
+- `02-pico-runtime.md`: `:267-268,291` map `spd_row` to `Pico.speed_raw`, but `:306` calls it "debug only, not stored in Pico". The code reads it into `Pico` (`Pico.java:418-419`) and also uses it outside the debug panel (`PicoActivity.java:1225,1467`). Remove `spd_row` from the list at `:306`.
 
 ---
 
-## Scartati
+## Discarded
 
-- "IDP bruteforce in `../../../scripts`": refutato. Il tool è `examples/local/idp_diagnostic.py`, già linkato in `docs/retry-logic.md:122`; il docstring avvisa già della durata.
+- "IDP bruteforce in `../../../scripts`": refuted. The tool is `examples/local/idp_diagnostic.py`, already linked in `docs/retry-logic.md:122`; its docstring already warns about the duration.
 
-## Priorità suggerite
+## Suggested priorities
 
-1. **#1, #2, #5, #7:** loop di invio/attesa in `pico_client.py`; unico punto, alto valore.
-2. **#3, #10-#14:** parsing robusto degli stati (impatto diretto su Home Assistant).
-3. **#4, #21, #23:** correzioni alla documentazione (porta, idp, LAN).
-4. **#6:** ACK centralizzato, poi verificare su hardware se il sintomo "idp bloccato" sparisce (in tal caso semplificare #8 e lo sweep idp).
-5. **#24:** `check_pin` e `upd_datetime` (basso costo), poi fasce.
+1. **#1, #2, #5, #7:** the send/wait loop in `pico_client.py`; one place, high value.
+2. **#3, #10-#14:** robust state parsing (direct impact on Home Assistant).
+3. **#4, #21, #23:** documentation fixes (port, idp, LAN).
+4. **#6:** central ACK, then check on hardware whether the "stuck idp" symptom goes away (if so, simplify #8 and the idp sweep).
+5. **#24:** `check_pin` and `upd_datetime` (cheap), then time slots.
 
-## Domande per test su hardware
+## Questions for hardware tests
 
-- Il firmware traccia l'idp? (decide #8, #21 e la logica di sweep)
-- Il firmware ritrasmette senza ACK del client? (#6)
-- `err` arriva come array a zero quando non ci sono errori? (#3)
-- La risposta a `upd_pico` è `{res:1}` o lo stato completo? (#22)
+- Does the firmware track the idp? (decides #8, #21 and the sweep logic)
+- Does the firmware retransmit without a client ACK? (#6)
+- Does `err` arrive as all-zero arrays when there are no errors? (#3)
+- Is the reply to `upd_pico` `{res:1}` or the full state? (#22)

@@ -43,7 +43,7 @@ async def main() -> None:
         print(f"  Mode    : {status.operating.mode.name}")
         print(f"  Temp    : {status.sensors.temperature_celsius}°C")
         print(f"  Humidity: {status.sensors.humidity_percent}%")
-        print(f"  Fan     : {status.operating.speed}%")
+        print(f"  Fan     : {status.operating.speed_requested}%")
 
         print("\nTurning on and switching to HEAT_RECOVERY mode…")
         await device.turn_on()

@@ -23,12 +23,12 @@ Diagnose issues in this Pico device library: the async UDP stack (`PicoClient`) 
 ### Wrong device gets response
 **Symptom:** IDP matches but parsed data is from a different device.  
 **Cause:** IDP ranges overlap between two `PicoClient` instances.  
-**Fix:** Inspect `_find_device_by_idp` in `SharedTransportManager`; ensure ranges don't overlap after `register_device`.
+**Fix:** Inspect `find_device_by_idp` in `SharedTransportManager`; ensure ranges don't overlap after `register_device`.
 
 ### ACK received but no status response
 **Symptom:** `got_ack = True` but `_wait_for_response` returns `None` after `ack_timeout`.  
 **Cause:** Device acknowledged command but status update packet was lost or delayed.  
-**Fix:** Increase `ack_timeout` or `retry_delay`; check device-side logs.
+**Fix:** `ack_timeout` is a hard-coded `2.0` in `_wait_for_response` (not a setting): change it there, or raise `retry_delay`; check device-side logs.
 
 ### `NotSupportedError` on valid command
 **Symptom:** Fan speed or humidity command raises `NotSupportedError`.  
@@ -79,7 +79,7 @@ Protocol reference: `docs/app/http-flows/` (`01` auth/token, `02` login codes, `
 7. Cloud: `verbose=True` logs every HTTP request/response (`→`/`←`) on `open_pico_local_api.cloud.pico_cloud_client`; scripts in `examples/cloud/` reproduce single calls. Logs contain the account email and PIN - redact before sharing
 
 ## Key Code Paths
-- Packet routing: `SharedPicoProtocol.datagram_received` → `_find_device_by_idp` → `registration.response_queue.put_nowait`
+- Packet routing: `SharedPicoProtocol.datagram_received` → `find_device_by_idp` → `registration.response_queue.put_nowait`
 - Command flow: `public method` → `_execute_command_with_retry` → `_send_udp_packet` → `_wait_for_response`
 - IDP allocation: `SharedTransportManager.register_device` assigns `(range_start, range_size)` per device
 - Public accessors: use `get_device_registration(device_id)` and `unmatched_queue` property instead of accessing `_devices`/`_unmatched_queue` directly
@@ -92,3 +92,4 @@ Protocol reference: `docs/app/http-flows/` (`01` auth/token, `02` login codes, `
 - `PicoTimeoutError` - operation timeout
 - `NotSupportedError` - command not valid in current mode (or not available in cloud mode)
 - `PicoAuthError` - cloud login rejected or token refused; subclass of `PicoDeviceError`, import from `open_pico_local_api.cloud`
+- `ValueError` - invalid arguments: `bruteforce_idp` with `start > end`, invalid or IPv6 subnet in discovery

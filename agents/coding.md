@@ -14,8 +14,8 @@ Async Python library (asyncio, Python 3.11+) for controlling Tecnosystemi Pico H
 - **`enums/`** - `DeviceModeEnum`, `TargetHumidityEnum`, `OnOffStateEnum`
 - **`models/`** - dataclass-style models: `PicoDeviceModel`, `CommandResponseModel`, `DeviceInfoModel`, `OperatingParametersModel`, `SensorReadingsModel`, etc.
 - **`exceptions/`** - `PicoDeviceError` (base), `PicoConnectionError`, `PicoTimeoutError`, `NotSupportedError`
-- **`utils/auto_reconnect.py`** - `@auto_reconnect` decorator for retrying on `PicoConnectionError`
-- **`utils/pico_protocol.py`** - base `PicoProtocol` asyncio `DatagramProtocol`
+- **`utils/auto_reconnect.py`** - opt-in `@auto_reconnect` decorator (retries on `PicoConnectionError`/`OSError`); **not applied** to `PicoClient`, which has no `_auto_reconnect` attributes
+- **`utils/pico_protocol.py`** - `PicoProtocol`, unused legacy `DatagramProtocol`; the live one is `SharedPicoProtocol` in `shared_transport_manager.py`
 - **`utils/constants.py`** - preset mode lists (e.g., `MODULAR_FAN_SPEED_PRESET_MODES`, `HUMIDITY_SELECTOR_PRESET_MODES`)
 - **`cloud/`** - cloud fallback, imported from `open_pico_local_api.cloud` (not re-exported at top level):
   - `PicoCloudClient` (`pico_cloud_client.py`) - subclass of `PicoClient`; overrides `connect`, `disconnect`, `get_status`, `reset_idp`, `bruteforce_idp` and `_execute_command_with_retry`. Adds `get_plants`, `get_devices`, `use_device`
@@ -41,7 +41,7 @@ Reverse-engineered from the official app; spec in `docs/app/http-flows/` (read i
 ## Coding Conventions
 - All I/O methods are `async`; use `asyncio.Lock` for shared state
 - Raise typed exceptions from `exceptions/` - never raw `Exception`
-- `verbose` flag gates all debug logging via `_LOGGER.debug`
+- `verbose` flag gates debug logging via `_LOGGER.debug` (the unused `pico_protocol.py` and `auto_reconnect.py` still use `print`)
 - New commands follow the `_execute_command_with_retry` pattern
 - Models use `from_dict(response)` factory methods
 - Guard every public method with `if not self._connected: raise PicoConnectionError(...)`
@@ -64,7 +64,7 @@ Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
 
 ## Key Constraints
 - Never create a new UDP socket per device - always use `SharedTransportManager`
-- Legacy mode (`use_shared_transport=False`) is intentionally unimplemented; do not implement it
+- Do not add a per-client UDP socket mode: there is no `use_shared_transport` option, and the shared transport is the only path
 - IDP must wrap within the allocated range `[_idp_range_start, _idp_range_start + _idp_range_size)` (UDP only; cloud uses its own `_cloud_idp` counter and never registers with `SharedTransportManager`)
 - `PicoClient` changes ripple into `PicoCloudClient`: keep `_execute_command_with_retry(cmd_dict, retry)` and the overridden method signatures in sync, and check `tests/cloud/`
 - Local is the primary path: do not make the cloud a default or automatic route
@@ -77,4 +77,4 @@ Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
 - Run locally: `./scripts/run_tests.sh` or `python3 -W all -m unittest discover -s tests -t . -v`
 - CI runs on push/PR via `.github/workflows/tests.yml` (Python 3.11, 3.12, 3.13)
 - Always run tests after changes; all 101 must pass with `-W all` (zero warnings)
-- `SharedTransportManager` singleton tests must reset `_instance = None; _lock = None` in `setUp`
+- `SharedTransportManager` singleton tests must reset `_instance = None; _lock = asyncio.Lock()` in `setUp` (`_lock = None` breaks `get_instance()`)
