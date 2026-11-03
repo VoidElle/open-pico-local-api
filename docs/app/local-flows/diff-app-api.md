@@ -48,7 +48,6 @@ Confirmed in the field: the PICO always replies to UDP 40069, whatever the sourc
 | 23 | low | lib-doc | LAN use / fixed ports presented as standard; the app only uses `192.168.4.1` |
 | 24 | low | gap | Missing commands: `check_pin`, `upd_datetime`, `get/set_fasce`, `m_crono`, `pico_info` |
 | 25 | low | gap | No provisioning, OTA, or handling of `null`/`"-1"` PIN |
-| 26 | low | dead code | `utils/pico_protocol.py` duplicate, unused |
 | 27 | low | doc-app | `02-pico-runtime.md` inconsistent about `spd_row` |
 
 ---
@@ -172,10 +171,6 @@ Confirmed in the field: the PICO always replies to UDP 40069, whatever the sourc
 - **OTA:** `ota_start{sha256,size}` → TCP `192.168.4.1:40060` in 1300 B chunks with a 20 ms pause → `ota_end` → `pico_ap{ap_m:5}`.
 - **PIN:** always serialised; no support for `None` (omitted) and no validation (the app requires 4 characters that parse as an int).
 - **Versions:** no numeric comparison helper (the app uses a 1.0.3 threshold).
-
-## 26. Dead code — low
-
-`../../../open_pico_local_api/utils/pico_protocol.py`: `PicoProtocol` (single queue, no idp routing) is used only by `tests/local/test_pico_protocol.py`. Remove or deprecate.
 
 ## 27. Inconsistencies in the app docs — low
 

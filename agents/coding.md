@@ -15,7 +15,6 @@ Async Python library (asyncio, Python 3.11+) for controlling Tecnosystemi Pico H
 - **`models/`** - dataclass-style models: `PicoDeviceModel`, `CommandResponseModel`, `DeviceInfoModel`, `OperatingParametersModel`, `SensorReadingsModel`, etc.
 - **`exceptions/`** - `PicoDeviceError` (base), `PicoConnectionError`, `PicoTimeoutError`, `NotSupportedError`
 - **`utils/auto_reconnect.py`** - opt-in `@auto_reconnect` decorator (retries on `PicoConnectionError`/`OSError`); **not applied** to `PicoClient`, which has no `_auto_reconnect` attributes
-- **`utils/pico_protocol.py`** - `PicoProtocol`, unused legacy `DatagramProtocol`; the live one is `SharedPicoProtocol` in `shared_transport_manager.py`
 - **`utils/constants.py`** - preset mode lists (e.g., `MODULAR_FAN_SPEED_PRESET_MODES`, `HUMIDITY_SELECTOR_PRESET_MODES`)
 - **`cloud/`** - cloud fallback, imported from `open_pico_local_api.cloud` (not re-exported at top level):
   - `PicoCloudClient` (`pico_cloud_client.py`) - subclass of `PicoClient`; overrides `connect`, `disconnect`, `get_status`, `reset_idp`, `bruteforce_idp` and `_execute_command_with_retry`. Adds `get_plants`, `get_devices`, `use_device`
@@ -41,7 +40,7 @@ Reverse-engineered from the official app; spec in `docs/app/http-flows/` (read i
 ## Coding Conventions
 - All I/O methods are `async`; use `asyncio.Lock` for shared state
 - Raise typed exceptions from `exceptions/` - never raw `Exception`
-- `verbose` flag gates debug logging via `_LOGGER.debug` (the unused `pico_protocol.py` and `auto_reconnect.py` still use `print`)
+- `verbose` flag gates debug logging via `_LOGGER.debug` (the opt-in `auto_reconnect.py` still uses `print`)
 - New commands follow the `_execute_command_with_retry` pattern
 - Models use `from_dict(response)` factory methods
 - Guard every public method with `if not self._connected: raise PicoConnectionError(...)`
@@ -72,9 +71,9 @@ Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
 - Python 3.11+ required
 
 ## Testing
-- Test suite lives in `tests/` - 101 tests (`tests/local/` UDP, `tests/cloud/` cloud client); runtime deps: `aiohttp`, `cryptography` (install with `pip install -e .`, otherwise `tests/cloud` fails to import and only 97 tests run)
+- Test suite lives in `tests/` - 95 tests (`tests/local/` UDP, `tests/cloud/` cloud client); runtime deps: `aiohttp`, `cryptography` (install with `pip install -e .`, otherwise `tests/cloud` fails to import and only 90 tests run)
 - Cloud tests run against a local fake backend (`aiohttp.test_utils.TestServer` + `base_url`) that enforces the rolling-token counter; never hit the real backend in tests
 - Run locally: `./scripts/run_tests.sh` or `python3 -W all -m unittest discover -s tests -t . -v`
 - CI runs on push/PR via `.github/workflows/tests.yml` (Python 3.11, 3.12, 3.13)
-- Always run tests after changes; all 101 must pass with `-W all` (zero warnings)
+- Always run tests after changes; all 95 must pass with `-W all` (zero warnings)
 - `SharedTransportManager` singleton tests must reset `_instance = None; _lock = asyncio.Lock()` in `setUp` (`_lock = None` breaks `get_instance()`)

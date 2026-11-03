@@ -21,6 +21,7 @@
 - Automatic IDP synchronization and range allocation
 
 ### 🔄 **Reliability**
+- **Opt-in auto-reconnect** decorator (see [Auto-Reconnect](#auto-reconnect-opt-in))
 - Configurable retry logic
 - Robust error handling
 - **IDP sync recovery** for resilient communication
@@ -321,6 +322,30 @@ Returns `True` if device is currently connected.
 if device.connected:
     print("✓ Device is online")
 ```
+
+### Auto-Reconnect (opt-in)
+
+`PicoClient` does not reconnect by itself. The `@auto_reconnect` decorator adds it to your own methods: when the method raises `PicoConnectionError` or `OSError`, it disconnects, waits, reconnects and calls the method again. It also connects first if the client is not connected.
+
+The decorator reads three attributes from the object, which you set yourself:
+
+```python
+from open_pico_local_api import PicoClient
+from open_pico_local_api.utils.auto_reconnect import auto_reconnect
+
+class ReconnectingPico(PicoClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._auto_reconnect = True          # False = call through, no reconnect
+        self._max_reconnect_attempts = 3     # total attempts
+        self._reconnect_delay = 2.0          # seconds between attempts
+
+    @auto_reconnect
+    async def get_status(self, retry: bool = True):
+        return await super().get_status(retry)
+```
+
+After the last failed attempt it raises `PicoConnectionError`. Other exceptions (`PicoTimeoutError`, `NotSupportedError`, ...) are raised straight away, without reconnecting. See [Connection Lifecycle](docs/connection-lifecycle.md).
 
 ---
 
@@ -836,8 +861,7 @@ open-pico-local-api/
 │   │   └── system_info_model.py       # System diagnostics
 │   ├── utils/
 │   │   ├── auto_reconnect.py          # Opt-in reconnect decorator (not used by PicoClient)
-│   │   ├── constants.py               # Mode constants
-│   │   └── pico_protocol.py           # Unused; the transport uses SharedPicoProtocol
+│   │   └── constants.py               # Mode constants
 │   ├── cloud/
 │   │   ├── __init__.py                # Exports PicoCloudClient, PicoAuthError
 │   │   ├── pico_cloud_client.py       # HTTPS transport, subclass of PicoClient
@@ -855,8 +879,7 @@ open-pico-local-api/
     │   ├── test_models.py
     │   ├── test_shared_transport_manager.py
     │   ├── test_pico_auto_discovery.py
-    │   ├── test_auto_reconnect.py
-    │   └── test_pico_protocol.py
+    │   └── test_auto_reconnect.py
     └── cloud/                         # Cloud tests
         └── test_cloud_client.py
 ```
@@ -901,7 +924,7 @@ Runs the full unit test suite with verbose output.
 
 ## 🧪 Testing
 
-The library ships with a full unit test suite (101 tests) covering all modules.
+The library ships with a full unit test suite (95 tests) covering all modules.
 
 ### Run locally
 
@@ -929,9 +952,8 @@ Tests run automatically on every push and pull request via GitHub Actions, acros
 | `shared_transport_manager.py` | 20 |
 | `pico_auto_discovery.py` | 12 |
 | `utils/auto_reconnect.py` | 6 |
-| `utils/pico_protocol.py` | 6 |
 | `cloud/` | 5 |
-| **Total** | **101** |
+| **Total** | **95** |
 
 ---
 
