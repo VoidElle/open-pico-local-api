@@ -880,8 +880,9 @@ open-pico-local-api/
     │   ├── test_shared_transport_manager.py
     │   ├── test_pico_auto_discovery.py
     │   └── test_auto_reconnect.py
-    └── cloud/                         # Cloud tests
-        └── test_cloud_client.py
+    └── cloud/                         # Cloud tests (fake backend, no network)
+        ├── test_cloud_client.py
+        └── test_examples.py           # Runs examples/cloud scripts against the fake backend
 ```
 
 ---
@@ -924,7 +925,7 @@ Runs the full unit test suite with verbose output.
 
 ## 🧪 Testing
 
-The library ships with a full unit test suite (95 tests) covering all modules.
+The library ships with a full unit test suite (102 tests) covering all modules.
 
 ### Run locally
 
@@ -953,7 +954,8 @@ Tests run automatically on every push and pull request via GitHub Actions, acros
 | `pico_auto_discovery.py` | 12 |
 | `utils/auto_reconnect.py` | 6 |
 | `cloud/` | 5 |
-| **Total** | **95** |
+| `examples/cloud/` | 7 |
+| **Total** | **102** |
 
 ---
 

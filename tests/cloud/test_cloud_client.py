@@ -27,6 +27,7 @@ def make_backend(sent: list) -> web.Application:
         assert req.headers["Token"] == "Ga5mM61KCm5Bk18lhD5J999jC2Mu0Vaf"
         if cipher.decrypt(body["Password"]) != "secret":
             return web.json_response({"ResCode": 1})
+        state["counter"] = 1  # each login starts a new token counter
         return web.json_response({"ResCode": 0, "ID": 7, "ListPlants": "[]",
                                   "Token": cipher.encrypt("sess_1").replace("\n", "")})
 

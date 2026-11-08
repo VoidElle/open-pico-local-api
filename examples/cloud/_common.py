@@ -22,7 +22,10 @@ def make_parser(description: str, device: bool = True) -> argparse.ArgumentParse
 
 def parse(parser: argparse.ArgumentParser) -> argparse.Namespace:
     args = parser.parse_args()
-    missing = [k for k in ("email", "password", "serial", "pin") if k in args and not getattr(args, k)]
+    # serial/pin are required only for single-device scripts (make_parser(device=True) adds --serial);
+    # multi_device_cloud adds its own optional --pin.
+    required = ("email", "password") + (("serial", "pin") if "serial" in args else ())
+    missing = [k for k in required if not getattr(args, k)]
     if missing:
         parser.error("missing: " + ", ".join("--" + m for m in missing))
     if args.verbose:

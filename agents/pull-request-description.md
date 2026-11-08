@@ -42,5 +42,5 @@ Scopes: `client`, `transport`, `models`, `enums`, `exceptions`, `utils`, `cloud`
 - Cloud commands are ack-only and applied asynchronously; flag changes that assume immediate state
 - Never paste credentials, tokens, PINs or serials from verbose logs into the PR
 - The cloud is a fallback: flag anything that makes it a default or automatic route
-- After any code change, all 95 tests must pass: `./scripts/run_tests.sh` or CI will catch it
+- After any code change, all 102 tests must pass: `./scripts/run_tests.sh` or CI will catch it
 - IPv6 subnets are not supported in `PicoAutoDiscovery` - raises `ValueError` by design

@@ -28,7 +28,7 @@ async def main() -> None:
     parser.add_argument("--set-mode", type=int, help="Operating mode (1..12) to apply to every device")
     parser.add_argument("--turn", choices=["on", "off"], help="Power state to apply to every device")
     args = parse(parser)
-    pins = dict(p.split("=", 1) for p in args.pins)
+    pins = {k.upper(): v for k, v in (p.split("=", 1) for p in args.pins)}  # serials are upper-cased
 
     async with PicoCloudClient(args.email, args.password, verbose=args.verbose) as cloud:
         devices = [d for d in await cloud.get_devices() if d.get("LVDV_Type") == PICO_TYPE]

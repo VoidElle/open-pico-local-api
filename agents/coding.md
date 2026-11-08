@@ -71,9 +71,10 @@ Valid Pico response identified by: `idp == 0`, `fw_ver` present, `mod` present.
 - Python 3.11+ required
 
 ## Testing
-- Test suite lives in `tests/` - 95 tests (`tests/local/` UDP, `tests/cloud/` cloud client); runtime deps: `aiohttp`, `cryptography` (install with `pip install -e .`, otherwise `tests/cloud` fails to import and only 90 tests run)
-- Cloud tests run against a local fake backend (`aiohttp.test_utils.TestServer` + `base_url`) that enforces the rolling-token counter; never hit the real backend in tests
+- Test suite lives in `tests/` - 102 tests (`tests/local/` UDP, `tests/cloud/` cloud client and examples); runtime deps: `aiohttp`, `cryptography` (install with `pip install -e .`, otherwise `tests/cloud` fails to import and only 90 tests run)
+- Cloud tests run against a local fake backend (`aiohttp.test_utils.TestServer` + `base_url`) that enforces the rolling-token counter; never hit the real backend in tests. Each login resets the fake token counter
+- `tests/cloud/test_examples.py` runs each `examples/cloud/` script (except the endless `monitor_cloud.py`) against that backend, with `asyncio.sleep` skipped: update it when an example's CLI or output changes
 - Run locally: `./scripts/run_tests.sh` or `python3 -W all -m unittest discover -s tests -t . -v`
 - CI runs on push/PR via `.github/workflows/tests.yml` (Python 3.11, 3.12, 3.13)
-- Always run tests after changes; all 95 must pass with `-W all` (zero warnings)
+- Always run tests after changes; all 102 must pass with `-W all` (zero warnings)
 - `SharedTransportManager` singleton tests must reset `_instance = None; _lock = asyncio.Lock()` in `setUp` (`_lock = None` breaks `get_instance()`)
