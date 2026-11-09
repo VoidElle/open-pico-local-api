@@ -10,6 +10,8 @@
 
 **[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Auto-Discovery](#-auto-discovery) • [Documentation](#-documentation) • [Internals](#-internals) • [Examples](#-examples) • [Scripts](#️-scripts) • [Testing](#-testing)**
 
+> **Disclaimer:** this is an unofficial, community-developed project. It is not affiliated with, endorsed by, or supported by Tecnosystemi S.p.A. All product names and trademarks are the property of their respective owners.
+
 ---
 
 ## ✨ Features
